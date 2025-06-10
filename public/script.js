@@ -680,8 +680,8 @@ function renderAlunosTableUI() {
                 <td>${aluno.autista ? 'Sim' : 'Não'}</td>
                 <td>${sala ? sala.nome : 'N/A'}</td>
                 <td class="actions-cell">
-                    <button href="https://silentsense-1.onrender.com/indexAluno.html" class="btn btn-small btn-link aluno-view-btn" title="Ver Perfil"><i class="fas fa-eye"></i></button>
-                    <button href="https://silentsense-1.onrender.com/indexAluno.html" class="btn btn-small btn-link aluno-edit-btn" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button href="indexAluno.html" class="btn btn-small btn-link aluno-view-btn" title="Ver Perfil"><i class="fas fa-eye"></i></button>
+                    <button href="indexAluno.html" class="btn btn-small btn-link aluno-edit-btn" title="Editar"><i class="fas fa-edit"></i></button>
                     <button class="btn btn-small btn-link aluno-delete-btn" title="Excluir"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
