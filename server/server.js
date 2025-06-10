@@ -36,27 +36,32 @@ const upload = multer({ storage: multer.memoryStorage() });
 // ==========================================================
 
 // --- ROTA GET /api/alunos (COM LÓGICA DE SIMULAÇÃO) ---
-app.get('/api/alunos', async (req, res) => {
-    if (simuladorAtivo) {
-        // MODO SIMULAÇÃO: Lê o arquivo local
-        console.log("Modo Simulação: Lendo de alunosPadrao.json local...");
-        try {
-            const data = fs.readFileSync(alunosPadraoPath, 'utf8');
-            res.json(JSON.parse(data));
-        } catch (error) {
-            console.error("Erro ao ler alunosPadrao.json:", error);
-            res.json([]);
-        }
-    } else {
-        // MODO NORMAL: Lê do JSONBin.io
-        try {
-            console.log("Modo Real: Buscando alunos do JSONBin...");
-            const response = await axios.get(`${JSONBIN_API_URL}/latest`, { headers: jsonBinHeaders });
-            res.json(response.data.record || []);
-        } catch (error) {
-            console.error("Erro ao buscar alunos do JSONBin:", error.response?.data);
-            res.status(500).json({ message: 'Erro ao buscar dados da nuvem.' });
-        }
+app.post('/api/alunos', async (req, res) => { // <--- REMOVA O upload.single(...)
+    try {
+        // ... o resto da sua lógica try...catch continua igual ...
+
+        // Buscando os dados atuais
+        const getResponse = await axios.get(`${JSONBIN_API_URL}/latest`, { headers: jsonBinHeaders });
+        const alunosCadastrados = getResponse.data.record || [];
+
+        // Preparando o novo aluno
+        const ultimoId = alunosCadastrados.length > 0 ? Math.max(...alunosCadastrados.map(a => a.id || 0)) : 0;
+        const novoAluno = {
+            id: ultimoId + 1,
+            nome: req.body.name, // req.body.name ainda funciona!
+            autista: req.body.diagnosis === 'autista',
+            // ... outros campos de texto ...
+            imagemUrl: 'images/perfil_padrao.jpg' // Usa a imagem padrão, pois não estamos processando o upload
+        };
+
+        alunosCadastrados.push(novoAluno);
+        await axios.put(JSONBIN_API_URL, alunosCadastrados, { headers: jsonBinHeaders });
+
+        res.status(201).json(novoAluno);
+
+    } catch (error) {
+        console.error('API ERRO ao cadastrar aluno no JSONBin:', error.response?.data || error.message);
+        res.status(500).json({ message: 'Erro interno do servidor ao processar o cadastro.' });
     }
 });
 
