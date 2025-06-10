@@ -12,8 +12,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- CONFIGURAÇÃO DO JSONBIN.IO ---
-const JSONBIN_API_KEY = "SUA_X_MASTER_KEY_AQUI";
-const ALUNOS_BIN_ID = "ID_DA_SUA_BIN_DE_ALUNOS_AQUI";
+const JSONBIN_API_KEY = "$2a$10$Jay/xyfmuFUEsGq2MX6iquj7OkEpzQAAk4m3dod/J9C2X45IqAdeG";
+const ALUNOS_BIN_ID = "68484d168a456b7966abd8b2";
 const JSONBIN_API_URL = `https://api.jsonbin.io/v3/b/${ALUNOS_BIN_ID}`;
 const jsonBinHeaders = {
     'Content-Type': 'application/json',
