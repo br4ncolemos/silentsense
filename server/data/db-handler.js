@@ -7,7 +7,7 @@ const axios = require('axios');
 // ==========================================================
 // IMPORTANTE: Substitua pelos seus valores reais!
 const JSONBIN_API_KEY = "$2a$10$Jay/xyfmuFUEsGq2MX6iquj7OkEpzQAAk4m3dod/J9C2X45IqAdeG";
-const DATABASE_BIN_ID = "68484d168a456b7966abd8b2"; // O ID da sua "caixa" de database
+const DATABASE_BIN_ID = "684852998960c979a5a79a0d"; // O ID da sua "caixa" de database
 
 const JSONBIN_API_URL = `https://api.jsonbin.io/v3/b/${DATABASE_BIN_ID}`;
 const jsonBinHeaders = {
