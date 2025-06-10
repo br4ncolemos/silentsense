@@ -11,7 +11,7 @@ const fs = require('fs'); // Filesystem para ler/escrever arquivos
 const multer = require('multer'); // Middleware para upload de arquivos
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(morgan('dev'));
