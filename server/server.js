@@ -90,7 +90,7 @@ app.post('/api/alunos', async (req, res) => {
         
         // Passo 3: Cria o objeto do novo aluno com os dados recebidos do frontend
         const novoAluno = {
-            id: ultimoId + 1,
+            id: ultimoId + 2,
             nome: req.body.name, // Frontend envia 'name'
             autista: req.body.diagnosis === 'autista', // Frontend envia 'diagnosis'
             laudo: req.body.report || null,
