@@ -1,6 +1,6 @@
-// public/indexAluno.js (VERSÃO FINAL E COMPLETA)
+// public/indexAluno.js (VERSÃO FINAL COMPLETA E CORRIGIDA)
 
-// Aplica o tema salvo no sistema principal assim que a página começa a carregar
+// Aplica o tema salvo no sistema
 (function() {
     const savedTheme = localStorage.getItem('appTheme') || 'light';
     document.body.className = '';
@@ -9,10 +9,8 @@
     }
 })();
 
-// Adiciona toda a lógica do formulário após o carregamento do HTML
 document.addEventListener('DOMContentLoaded', function() {
     
-    // Seleciona todos os elementos do DOM que vamos usar
     const form = document.getElementById('student-registration-form');
     const studentNameInput = document.getElementById('studentName');
     const profileImageInput = document.getElementById('profileImageInput');
@@ -20,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const dateInput = document.getElementById('birthDate');
     const phoneLabel = document.getElementById('phoneLabel');
     
-    // Lógica para pré-visualização da imagem
+    // Preview da imagem (visual, não afeta o envio)
     profileImageInput.addEventListener('change', function() {
         const file = this.files[0];
         if (file) {
@@ -30,28 +28,49 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Lógica para cálculo e validação da idade
+    // Lógica para cálculo e validação da idade (VERSÃO COMPLETA)
     dateInput.addEventListener('change', function() {
-        const birthDateString = this.value;
-        if (!birthDateString) return;
-        const birthDate = new Date(birthDateString + 'T00:00:00');
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-        
-        if (age > 65 || age < 5) {
-            alert(`Sério mesmo? ${age} anos?!\n\nPor favor, insira uma data de nascimento válida.`);
-            this.value = '';
-            phoneLabel.textContent = 'Telefone do Responsável:';
+        const birthDateString = this.value; // Pega a data do campo, ex: "2010-05-15"
+
+        // Se o campo estiver vazio, não faz nada
+        if (!birthDateString) {
             return;
         }
-        phoneLabel.textContent = (age >= 18) ? 'Telefone do Aluno:' : 'Telefone do Responsável:';
+
+        // Cria um objeto Date com a data de nascimento.
+        // Adicionar 'T00:00:00' evita problemas de fuso horário.
+        const birthDate = new Date(birthDateString + 'T00:00:00');
+        
+        // Pega a data de hoje
+        const today = new Date();
+
+        // Calcula a diferença de anos
+        let age = today.getFullYear() - birthDate.getFullYear();
+        
+        // Ajusta a idade se o aniversário ainda não ocorreu este ano
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        
+        // Valida se a idade está dentro de um intervalo razoável (5 a 65 anos)
+        if (age > 65 || age < 5) {
+            alert(`Sério mesmo? ${age} anos?!\n\nPor favor, insira uma data de nascimento válida.`);
+            this.value = ''; // Limpa o campo de data
+            phoneLabel.textContent = 'Telefone do Responsável:'; // Volta o texto para o padrão
+            return; // Para a execução da função
+        }
+        
+        // Muda o texto da label do telefone com base na idade
+        if (age >= 18) {
+            phoneLabel.textContent = 'Telefone do Aluno:';
+        } else {
+            phoneLabel.textContent = 'Telefone do Responsável:';
+        }
     });
 
-    // Lógica de envio do formulário
+    // LÓGICA DE ENVIO DO FORMULÁRIO (TOTALMENTE REFEITA PARA JSON)
     form.addEventListener('submit', function(event) {
-        // Impede que o formulário recarregue a página, permitindo nosso controle via JavaScript
         event.preventDefault(); 
         
         const nome = studentNameInput.value.trim();
@@ -60,32 +79,40 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // FormData coleta todos os campos do formulário com o atributo 'name'
-        const formData = new FormData(form);
-        
-        // Pega o arquivo de imagem pelo seu ID e o adiciona ao FormData.
-        // O nome 'profileImage' deve ser o mesmo que o backend espera.
-        if (profileImageInput.files[0]) {
-            formData.append('profileImage', profileImageInput.files[0]);
-        }
+        // PASSO 1: Criar um objeto JavaScript simples com os dados do formulário
+        const dadosParaEnviar = {
+            name: document.getElementById('studentName').value,
+            class: document.getElementById('studentClass').value,
+            birthDate: document.getElementById('birthDate').value,
+            phone: document.getElementById('studentPhone').value,
+            diagnosis: document.getElementById('studentDiagnosis').value,
+            report: document.getElementById('studentReport').value,
+            observations: document.getElementById('studentObservations').value
+        };
 
-        // Envia os dados para o servidor
-        fetch('http://localhost:3000/api/alunos', {
+        // PASSO 2: Definir a URL correta do servidor
+        const API_URL = 'https://silentsense-1.onrender.com/api/alunos';
+
+        // PASSO 3: Enviar os dados como JSON
+        fetch(API_URL, {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(dadosParaEnviar)
         })
         .then(response => {
             if (!response.ok) {
-                return response.json().then(err => { throw new Error(err.message) });
+                return response.json().then(err => { throw new Error(err.message || 'Ocorreu um erro no servidor.') });
             }
             return response.json();
         })
         .then(data => {
             alert('Aluno cadastrado com sucesso!');
-            window.location.href = 'index.html'; // Redireciona para a página principal
+            window.location.href = 'index.html';
         })
         .catch(error => {
-            alert(`Ocorreu um erro: ${error.message}`);
+            alert(`Ocorreu um erro ao cadastrar: ${error.message}`);
             console.error('Erro no fetch:', error);
         });
     });
