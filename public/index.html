@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Silent Sense APP</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <div class="app-shell">
+        <header class="app-header">
+            <div class="header-content">
+                <img src="images/iconapp.png" alt="Silent Sense APP Logo" class="header-logo" id="headerLogo">
+                <h1 id="currentSectionTitle">Início</h1>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" id="adminModeToggleBtn" title="Modo Administrador">
+                    <i class="fas fa-user-shield"></i>
+                </button>
+                <button class="icon-btn" id="themeToggleBtn" title="Alternar Tema">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </header>
+
+        <main class="main-container">
+            <section id="inicio" class="content-section active">
+                <div class="section-top-bar">
+                    <h2>Visão Geral</h2>
+                    <button class="btn btn-secondary btn-small" id="refreshDashboardBtn">
+                        <i class="fas fa-sync-alt"></i> Atualizar
+                    </button>
+                </div>
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <h3><i class="fas fa-users"></i> Alunos Ativos</h3>
+                        <p class="stat-value" id="dashTotalAlunos">0</p>
+                        <p class="stat-detail"><span id="dashAlunosAutistas">0</span> com autismo</p>
+                    </div>
+                    <div class="card">
+                        <h3><i class="fas fa-volume-up"></i> Nível de Barulho</h3>
+                        <div class="noise-meter-container">
+                            <div class="noise-level-bar" id="dashNoiseLevelBar"></div>
+                        </div>
+                        <p class="stat-value" id="dashNoiseValue">0 dB</p>
+                        <p class="stat-detail">Máx: <span id="dashMaxNoise">0</span> dB</p>
+                    </div>
+                    <div class="card">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Incidentes Hoje</h3>
+                        <p class="stat-value" id="dashIncidentesHoje">0</p>
+                        <p class="stat-detail"><span id="dashIncidentesAutistas">0</span> com autistas</p>
+                    </div>
+                    <div class="card">
+                        <h3><i class="fas fa-chalkboard-user"></i> Sala Principal</h3>
+                        <p class="stat-value" id="dashSalaStatus">N/A</p>
+                        <button class="btn btn-link btn-small" id="dashToggleSalaBtn">Ver Detalhes</button>
+                    </div>
+                    <div class="card card-full-width">
+                        <h3><i class="fas fa-chart-line"></i> Barulho por Hora</h3>
+                        <div class="chart-container">
+                            <canvas id="dashboardNoiseChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card card-full-width">
+                        <h3><i class="fas fa-chart-bar"></i> Incidentes por Dia</h3>
+                        <div class="chart-container">
+                            <canvas id="dashboardIncidentsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="chamada" class="content-section">
+                <div class="section-top-bar">
+                    <h2>Chamada</h2>
+                    <select id="chamadaSalaSelect" class="select-input select-input-small">
+                        <option value="">Escolha uma sala</option>
+                    </select>
+                </div>
+                <div class="chamada-controls">
+                    <button class="btn btn-primary" id="chamadaStartBtn"><i class="fas fa-play"></i> Iniciar</button>
+                    <div class="chamada-timer-status">
+                        <span id="chamadaCurrentSala"></span>
+                        <span id="chamadaStatus"><i class="fas fa-clock"></i> <span id="chamadaTime">00:00</span></span>
+                    </div>
+                    <button class="btn btn-secondary" id="chamadaEndBtn" disabled><i class="fas fa-stop"></i> Finalizar</button>
+                </div>
+                <div class="alunos-grid-chamada" id="chamadaAlunosGrid">
+                    <p class="empty-message">Selecione uma sala para iniciar a chamada.</p>
+                </div>
+                 <div class="chamada-actions-footer" style="display:none;">
+                    <button class="btn btn-success" id="chamadaGerarRelatorioBtn" disabled><i class="fas fa-file-alt"></i> Gerar Relatório</button>
+                </div>
+            </section>
+
+            <section id="alunos" class="content-section">
+              <div class="section-top-bar">
+    <h2>Alunos</h2>
+    <!-- O botão agora é um link que leva para indexAluno.html -->
+    <a href="indexAluno.html" class="btn btn-primary" id="botNovoAluno"><i class="fas fa-plus"></i> Novo Aluno</a>
+</div>
+                <div class="filters-bar">
+                    <input type="search" id="alunosSearchInput" placeholder="Buscar aluno..." class="search-input-main">
+                    <select id="alunosFilterAutismoSelect" class="select-input select-input-small">
+                        <option value="all">Todos</option>
+                        <option value="nenhum">Nenhuma</option>
+                        <option value="autista">Autismo</option>
+                        <option value="tdah">TDAH</option>
+                    </select>
+                </div>
+                <div class="table-responsive-container">
+                    <table class="data-table" id="alunosTable">
+                        <thead><tr><th>Nome</th><th>Autismo</th><th>Sala</th><th>Ações</th></tr></thead>
+                        <tbody id="alunosTableBody">
+                            <tr><td colspan="4" class="empty-message">Carregando alunos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="relatorios" class="content-section">
+                <div class="section-top-bar">
+                    <h2>Relatórios</h2>
+                    <button class="btn btn-primary" id="relatoriosGerarBtn"><i class="fas fa-file-alt"></i> Gerar</button>
+                </div>
+                <div class="filters-bar">
+                    <select id="relatoriosTypeSelect" class="select-input">
+                        <option value="chamada_geral">Chamada (Geral)</option>
+                        <option value="incidentes_geral">Incidentes (Geral)</option>
+                        <option value="desempenho_aluno">Desempenho Aluno</option>
+                    </select>
+                    <input type="date" id="relatoriosDateInput" class="input-field">
+                    <select id="relatoriosSalaSelect" class="select-input">
+                        <option value="all">Todas as Salas</option>
+                    </select>
+                    <select id="relatoriosAlunoSelect" class="select-input" style="display:none;">
+                        <option value="all">Todos os Alunos</option>
+                    </select>
+                </div>
+                <div class="report-output-area" id="relatoriosOutputArea">
+                    <p class="empty-message">Selecione os filtros e clique em "Gerar".</p>
+                </div>
+            </section>
+
+            <section id="configuracoes" class="content-section">
+                <div class="section-top-bar">
+                    <h2>Configurações</h2>
+                </div>
+                <div class="settings-tabs-container">
+                    <div class="tabs-nav">
+                        <button class="tab-link active" data-tabtarget="configGeralTab">Geral</button>
+                        <button class="tab-link" data-tabtarget="configSalasTab">Salas</button>
+                        <button class="tab-link" data-tabtarget="configAdminTab">Admin</button>
+                        <button class="tab-link" data-tabtarget="configHardwareTab">Hardware</button>
+                    </div>
+                    <div class="tabs-content">
+                        <div id="configGeralTab" class="tab-pane active">
+                            <h4>Preferências</h4>
+                            <div class="form-row">
+                                <label for="configThemeSelect">Tema:</label>
+                                <select id="configThemeSelect" class="select-input">
+                                    <option value="light">Claro</option>
+                                    <option value="dark">Escuro</option>
+                                    <option value="autism-friendly">Amigo do Autismo</option>
+                                </select>
+                            </div>
+                             <div class="form-row">
+                                <label for="configNotificationsCheckbox">Notificações:</label>
+                                <input type="checkbox" id="configNotificationsCheckbox" class="styled-checkbox">
+                            </div>
+                            <div class="form-row">
+                                <label for="configNoiseLimitRange">Limite de Barulho (Alerta): <span id="configNoiseLimitValue">70</span>dB</label>
+                                <input type="range" id="configNoiseLimitRange" min="30" max="100" value="70" class="styled-range">
+                            </div>
+                            <button class="btn btn-primary" id="configSaveGeralBtn">Salvar Preferências</button>
+                        </div>
+                        <div id="configSalasTab" class="tab-pane">
+                            <h4>Gerenciar Salas</h4>
+                            <button class="btn btn-primary btn-inline" id="configOpenAddSalaModalBtn"><i class="fas fa-plus"></i> Nova Sala</button>
+                            <div class="table-responsive-container" style="margin-top:15px;">
+                                <table class="data-table" id="configSalasTable">
+                                    <thead><tr><th>Nome</th><th>Adaptada</th><th>Alunos</th><th>Ações</th></tr></thead>
+                                    <tbody id="configSalasTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="configAdminTab" class="tab-pane">
+                            <h4>Administração</h4>
+                            <div class="admin-actions-group">
+                                <button class="btn btn-secondary" id="configBackupBtn"><i class="fas fa-download"></i> Fazer Backup</button>
+                                <button class="btn btn-secondary" id="configRestoreBtn"><i class="fas fa-upload"></i> Restaurar Backup</button>
+                                <button class="btn btn-danger" id="configResetBtn"><i class="fas fa-trash-alt"></i> Resetar Dados</button>
+                            </div>
+                            <div class="form-row">
+                                <label for="configSimulateDataCheckbox">Desativar o simulador de dados:</label>
+                                <input type="checkbox" id="configSimulateDataCheckbox" class="styled-checkbox">
+                            </div>
+                            <button class="btn btn-primary" id="configSaveAdminBtn" style="margin-top: 15px;">Salvar Configurações Admin</button>
+                        </div>
+                        
+                        <div id="configHardwareTab" class="tab-pane active">
+                            <h4>Cor dos LEDs</h4>
+                            <div class="form-row">
+                                <label for="configThemeSelect">Nível Baixo:</label>
+                                <select id="configThemeSelect" class="select-input">
+                                    <option style="background-color: white; color: black;" value="white">Branco</option>
+                                    <option style="background-color: red;" value="red">Vermelho</option>
+                                    <option style="background-color: green;" value="green">Verde</option>
+                                    <option style="background-color: blue;" value="blue">Azul</option>
+                                    <option style="background-color: cyan; color: black;" value="cyan">Ciano</option>
+                                    <option style="background-color: magenta;" value="magenta">Magenta</option>
+                                    <option style="background-color: yellow; color: black;" value="yellow">Amarelo</option>
+                                </select>
+                                <label for="configThemeSelect">Nível Medio:</label>
+                                <select id="configThemeSelect" class="select-input">
+                                    <option style="background-color: white; color: black;" value="white">Branco</option>
+                                    <option style="background-color: red;" value="red">Vermelho</option>
+                                    <option style="background-color: green;" value="green">Verde</option>
+                                    <option style="background-color: blue;" value="blue">Azul</option>
+                                    <option style="background-color: cyan; color: black;" value="cyan">Ciano</option>
+                                    <option style="background-color: magenta;" value="magenta">Magenta</option>
+                                    <option style="background-color: yellow; color: black;" value="yellow">Amarelo</option>
+                                </select>
+                                <label for="configThemeSelect">Nível Alto:</label>
+                                <select id="configThemeSelect" class="select-input">
+                                    <option style="background-color: white; color: black;" value="white">Branco</option>
+                                    <option style="background-color: red;" value="red">Vermelho</option>
+                                    <option style="background-color: green;" value="green">Verde</option>
+                                    <option style="background-color: blue;" value="blue">Azul</option>
+                                    <option style="background-color: cyan; color: black;" value="cyan">Ciano</option>
+                                    <option style="background-color: magenta;" value="magenta">Magenta</option>
+                                    <option style="background-color: yellow; color: black;" value="yellow">Amarelo</option>
+                                </select>
+                                <label for="configThemeSelect">Nível Extremo:</label>
+                                <select id="configThemeSelect" class="select-input">
+                                    <option style="background-color: white; color: black;" value="white">Branco</option>
+                                    <option style="background-color: red;" value="red">Vermelho</option>
+                                    <option style="background-color: green;" value="green">Verde</option>
+                                    <option style="background-color: blue;" value="blue">Azul</option>
+                                    <option style="background-color: cyan; color: black;" value="cyan">Ciano</option>
+                                    <option style="background-color: magenta;" value="magenta">Magenta</option>
+                                    <option style="background-color: yellow; color: black;" value="yellow">Amarelo</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary" id="configSaveGeralBtn">Salvar Preferências</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <nav class="bottom-nav" id="mainNav">
+            <button class="nav-item active" data-section="inicio" title="Início">
+                <i class="fas fa-home"></i><span class="nav-text">Início</span>
+            </button>
+            <button class="nav-item" data-section="chamada" title="Chamada">
+                <i class="fas fa-clipboard-list"></i><span class="nav-text">Chamada</span>
+            </button>
+            <button class="nav-item" data-section="alunos" title="Alunos">
+                <i class="fas fa-users"></i><span class="nav-text">Alunos</span>
+            </button>
+            <button class="nav-item" data-section="relatorios" title="Relatórios">
+                <i class="fas fa-chart-bar"></i><span class="nav-text">Relatórios</span>
+            </button>
+            <button class="nav-item" data-section="configuracoes" title="Configurações">
+                <i class="fas fa-cog"></i><span class="nav-text">Config.</span>
+            </button>
+        </nav>
+    </div>
+
+    <div class="modal-overlay" id="genericModalOverlay" style="display:none;">
+        <div class="modal-box" id="genericModalBox">
+            <header class="modal-header">
+                <h3 id="genericModalTitle">Título do Modal</h3>
+                <button class="close-modal-btn" id="genericModalCloseBtn" title="Fechar">×</button>
+            </header>
+            <div class="modal-body" id="genericModalBody">
+            </div>
+            <footer class="modal-footer" id="genericModalFooter" style="display:none;">
+                <button class="btn btn-secondary" id="genericModalCancelBtn">Cancelar</button>
+                <button class="btn btn-primary" id="genericModalConfirmBtn">Confirmar</button>
+            </footer>
+        </div>
+    </div>
+
+    <template id="alunoCardChamadaTemplate">
+        <div class="aluno-card-chamada">
+            <div class="aluno-avatar-chamada"><i class="fas fa-user"></i></div>
+            <p class="aluno-nome-chamada">Nome Aluno</p>
+            <span class="aluno-autism-badge-chamada" style="display:none;"><i class="fas fa-infinity"></i></span>
+            <div class="chamada-status-icon"></div>
+        </div>
+    </template>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="script.js"></script>
+    <script>
+        var criarAlunoVis = false;
+        function novoAluno()
+        {
+            if(criarAlunoVis)
+            {
+                document.getElementById('criarAluno').style.visibility = 'collapse';
+                criarAlunoVis = false;
+            }
+            else
+            {
+                document.getElementById('criarAluno').style.visibility = 'visible';
+                criarAlunoVis = true;
+            }
+        }
+    </script>
+</body>
+</html>

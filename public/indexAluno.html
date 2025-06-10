@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Novo Aluno</title>
+
+    <!-- Fontes e Ícones -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+
+    <!-- CSS Integrado e Completo -->
+    <style>
+        :root {
+            --primary-color: #007AFF; --primary-dark: #005ecb; --secondary-color: #FF9500;
+            --success-color: #34C759; --danger-color: #FF3B30; --warning-color: #FFCC00;
+            --light-gray: #f2f2f7; --medium-gray: #e5e5ea; --dark-gray: #8e8e93;
+            --text-color: #1c1c1e; --text-secondary-color: #636366;
+            --bg-color: #ffffff; --bg-alt-color: var(--light-gray);
+            --border-radius: 12px; --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            --font-main: 'Inter', sans-serif;
+        }
+        body.dark-theme {
+            --primary-color: #0A84FF; --secondary-color: #FF9F0A; --success-color: #30D158; 
+            --danger-color: #FF453A; --warning-color: #FFD60A; --light-gray: #2c2c2e;
+            --medium-gray: #3A3A3C; --dark-gray: #8E8E93; --text-color: #F2F2F7;          
+            --text-secondary-color: #AEAEB2; --bg-color: #000000; --bg-alt-color: #1C1C1E;    
+            --card-shadow: 0 4px 15px rgba(255, 255, 255, 0.08);
+        }
+        body.autism-friendly-theme {
+            --primary-color: #5C8AAD; --primary-dark: #4A6D8C; --secondary-color: #A2D5AB;
+            --success-color: #77DD77; --danger-color: #FFB3A7; --warning-color: #FFE8A1;
+            --light-gray: #F0F4F8; --medium-gray: #DDE2E6; --dark-gray: #8A94A6;
+            --text-color: #3D4A5C; --text-secondary-color: #6B788E;
+            --bg-color: #E6E9ED; --bg-alt-color: #FFFFFF;
+            --card-shadow: 0 2px 5px rgba(92, 138, 173, 0.1); 
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--font-main); background-color: var(--bg-color); color: var(--text-color);
+            display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 1rem;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .form-container {
+            position: relative; display: flex; gap: 2.5rem; width: 100%; max-width: 900px;
+            background: var(--bg-alt-color); border-radius: var(--border-radius); box-shadow: var(--card-shadow);
+            padding: 2.5rem; border: 1px solid var(--medium-gray); animation: fadeInUp 0.7s ease-out forwards;
+        }
+        .close-button {
+            position: absolute; top: 15px; right: 20px; font-size: 1.8rem; font-weight: 400;
+            color: var(--text-secondary-color); text-decoration: none; line-height: 1; transition: all 0.3s ease; padding: 5px;
+        }
+        .close-button:hover { color: var(--danger-color); transform: scale(1.1) rotate(90deg); }
+        .image-section {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            flex-basis: 220px; flex-shrink: 0;
+        }
+        .profile-image-wrapper { position: relative; cursor: pointer; border-radius: 50%; }
+        .profile-image {
+            width: 160px; height: 160px; border-radius: 50%; object-fit: cover; border: 4px solid var(--medium-gray);
+            background-color: var(--bg-color); transition: transform 0.3s ease, border-color 0.3s ease, filter 0.3s ease;
+        }
+        .profile-image-wrapper:hover .profile-image { border-color: var(--primary-color); filter: brightness(0.7); }
+        .upload-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%;
+            background-color: rgba(0,0,0,0.5); color: white; display: flex;
+            flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+        }
+        .profile-image-wrapper:hover .upload-overlay { opacity: 1; }
+        .upload-overlay i { font-size: 2rem; margin-bottom: 0.5rem; }
+        .upload-overlay span { font-size: 0.9rem; font-weight: 500; }
+        #profileImageInput { display: none; }
+        .fields-section { flex-grow: 1; }
+        .form-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-color); }
+        .form-subtitle { margin-bottom: 2rem; color: var(--text-secondary-color); }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; font-weight: 500; font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--text-secondary-color); }
+        .select-input, .input-field, textarea.input-field {
+            width: 100%; padding: 10px 12px; font-size: 1rem; font-family: var(--font-main);
+            background-color: var(--bg-color); border: 1px solid var(--medium-gray); border-radius: 8px;
+            color: var(--text-color); outline: none; transition: all 0.3s ease;
+        }
+        .select-input:focus, .input-field:focus, textarea.input-field:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 20%, transparent);
+        }
+        textarea.input-field { resize: vertical; min-height: 80px; }
+        .form-actions {
+            margin-top: 2rem; padding-top: 1.5rem; display: flex;
+            justify-content: flex-end; border-top: 1px solid var(--medium-gray);
+        }
+        .submit-button {
+            padding: 10px 22px; border: none; border-radius: var(--border-radius); font-size: 1rem;
+            font-weight: 600; cursor: pointer; transition: background-color 0.2s, transform 0.2s;
+            background-color: var(--primary-color); color: white;
+        }
+        .submit-button:hover { background-color: var(--primary-dark); transform: translateY(-2px); }
+        @media (max-width: 820px) {
+            .form-container { flex-direction: column; padding: 2.5rem 1.5rem; gap: 2rem; }
+            .image-section { flex-basis: auto; width: 100%; }
+            .profile-image { width: 150px; height: 150px; }
+            .form-title, .form-subtitle { text-align: center; }
+            .form-actions { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="form-container">
+        <a href="index.html" class="close-button" title="Voltar para a lista">×</a>
+        
+        <div class="image-section">
+            <label for="profileImageInput" class="profile-image-wrapper">
+                <img src="images/perfil_padrao.jpg" alt="Foto de Perfil" id="profileImagePreview" class="profile-image">
+                <div class="upload-overlay"><i class="fas fa-camera"></i><span>Alterar Foto</span></div>
+            </label>
+            <!-- Este input está fora do form, mas a label o aciona. O JS pega o arquivo dele pelo ID. -->
+            <input type="file" id="profileImageInput" accept="image/png, image/jpeg, image/webp">
+        </div>
+
+        <div class="fields-section">
+            <h2 class="form-title">Cadastrar Aluno</h2>
+            <p class="form-subtitle">Preencha os dados para criar um novo perfil.</p>
+
+            <form id="student-registration-form">
+                <div class="form-group">
+                    <label for="studentName">Nome Completo:</label>
+                    <input type="text" id="studentName" name="name" class="input-field" required>
+                </div>
+                <div class="form-group">
+                    <label for="studentClass">Turma:</label>
+                    <select id="studentClass" name="class" class="select-input">
+                        <option value="sala_1">1º RH</option>
+                        <option value="sala_2">2º Saneamento</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="birthDate">Data de Nascimento:</label>
+                    <input type="date" id="birthDate" name="birthDate" class="input-field" required>
+                </div>
+                <div class="form-group">
+                    <label for="studentPhone" id="phoneLabel">Telefone do Responsável:</label>
+                    <input type="tel" id="studentPhone" name="phone" class="input-field">
+                </div>
+                <div class="form-group">
+                    <label for="studentDiagnosis">Diagnóstico:</label>
+                    <select id="studentDiagnosis" name="diagnosis" class="select-input">
+                        <option value="nenhum">Nenhuma</option>
+                        <option value="autista">Autismo</option>
+                        <option value="autis">TDAH</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="studentReport">Laudo (Descrição):</label>
+                    <textarea id="studentReport" name="report" class="input-field" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="studentObservations">Observações (Opcional):</label>
+                    <textarea id="studentObservations" name="observations" class="input-field" rows="3"></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="submit-button">Salvar Cadastro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="indexAluno.js"></script>
+
+</body>
+</html>
