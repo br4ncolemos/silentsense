@@ -1,151 +1,102 @@
-// server/server.js (VERSÃO FINAL COM CADASTRO)
+// server/server.js (VERSÃO HÍBRIDA)
 
-// ==========================================================
-// IMPORTAÇÕES E CONFIGURAÇÃO
-// ==========================================================
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const morgan = require('morgan');
-const fs = require('fs'); // Filesystem para ler/escrever arquivos
-const multer = require('multer'); // Middleware para upload de arquivos
+const multer = require('multer');
+const axios = require('axios');
+const fs = require('fs'); // Precisamos do fs de volta para ler o alunosPadrao.json
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// --- CONFIGURAÇÃO DO JSONBIN.IO ---
+const JSONBIN_API_KEY = "SUA_X_MASTER_KEY_AQUI";
+const ALUNOS_BIN_ID = "ID_DA_SUA_BIN_DE_ALUNOS_AQUI";
+const JSONBIN_API_URL = `https://api.jsonbin.io/v3/b/${ALUNOS_BIN_ID}`;
+const jsonBinHeaders = {
+    'Content-Type': 'application/json',
+    'X-Master-Key': JSONBIN_API_KEY
+};
+
+// --- MODO DE SIMULAÇÃO ---
+let simuladorAtivo = true; // Começa ativo
+const alunosPadraoPath = path.join(__dirname, 'data', 'alunosPadrao.json');
+
+// --- MIDDLEWARES ---
+app.use(cors({ origin: '*' }));
 app.use(morgan('dev'));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // Importante para formulários
 app.use(express.static(path.join(__dirname, '..', 'public')));
-
-// --- Configuração do Multer (Upload de Imagem) ---
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const destPath = path.join(__dirname, '..', 'public', 'images');
-        fs.mkdirSync(destPath, { recursive: true }); // Garante que a pasta exista
-        cb(null, destPath);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, `aluno-${uniqueSuffix}${path.extname(file.originalname)}`);
-    }
-});
-const upload = multer({ storage: storage });
-
-
-// ==========================================================
-// ESTADO E LÓGICA DO MODO DE SIMULAÇÃO
-// ==========================================================
-let simuladorAtivo = true;
-
-const alunosPadraoPath = path.join(__dirname, 'data', 'alunosPadrao.json');
-const alunosCadastradosPath = path.join(__dirname, 'data', 'alunosCadastrados.json');
-
-const lerJson = (caminho) => {
-    try {
-        if (fs.existsSync(caminho)) {
-            const data = fs.readFileSync(caminho, 'utf8');
-            return data ? JSON.parse(data) : [];
-        }
-        return [];
-    } catch (error) {
-        console.error(`Erro ao ler JSON: ${caminho}`, error);
-        return [];
-    }
-};
-
-const salvarJson = (caminho, dados) => {
-    try {
-        const dataString = JSON.stringify(dados, null, 2); // Formata para leitura
-        fs.writeFileSync(caminho, dataString, 'utf8');
-    } catch (error) {
-        console.error(`Erro ao salvar JSON: ${caminho}`, error);
-    }
-};
-
+const upload = multer({ storage: multer.memoryStorage() });
 
 // ==========================================================
 // ROTAS DA API
 // ==========================================================
 
-// --- ROTAS GET ---
-app.get('/api/alunos', (req, res) => {
+// --- ROTA GET /api/alunos (COM LÓGICA DE SIMULAÇÃO) ---
+app.get('/api/alunos', async (req, res) => {
     if (simuladorAtivo) {
-        res.json(lerJson(alunosPadraoPath));
+        // MODO SIMULAÇÃO: Lê o arquivo local
+        console.log("Modo Simulação: Lendo de alunosPadrao.json local...");
+        try {
+            const data = fs.readFileSync(alunosPadraoPath, 'utf8');
+            res.json(JSON.parse(data));
+        } catch (error) {
+            console.error("Erro ao ler alunosPadrao.json:", error);
+            res.json([]);
+        }
     } else {
-        res.json(lerJson(alunosCadastradosPath));
+        // MODO NORMAL: Lê do JSONBin.io
+        try {
+            console.log("Modo Real: Buscando alunos do JSONBin...");
+            const response = await axios.get(`${JSONBIN_API_URL}/latest`, { headers: jsonBinHeaders });
+            res.json(response.data.record || []);
+        } catch (error) {
+            console.error("Erro ao buscar alunos do JSONBin:", error.response?.data);
+            res.status(500).json({ message: 'Erro ao buscar dados da nuvem.' });
+        }
     }
 });
 
-app.get('/api/configuracoes', (req, res) => {
-    res.json({ simulacaoAtiva: simuladorAtivo });
-});
-
-// --- ROTA PUT ---
+// --- ROTA PUT /api/configuracoes (PARA MUDAR O MODO) ---
 app.put('/api/configuracoes', (req, res) => {
     const novoEstado = req.body.simulacaoAtiva;
     if (typeof novoEstado === 'boolean') {
         simuladorAtivo = novoEstado;
+        console.log(`[API] Modo Simulador alterado para: ${simuladorAtivo}`);
         res.json({ success: true, simulacaoAtiva: simuladorAtivo });
     } else {
         res.status(400).json({ success: false, message: 'Valor inválido.' });
     }
 });
 
-// ============================================================
-// ROTA POST PARA CADASTRAR ALUNOS (A PARTE QUE FALTAVA)
-// ============================================================
-// A rota usa o middleware 'upload.single('profileImage')' para processar a imagem
-app.post('/api/alunos', upload.single('profileImage'), (req, res) => {
+// --- ROTA POST /api/alunos (SEMPRE SALVA NO JSONBIN.IO) ---
+app.post('/api/alunos', upload.single('profileImage'), async (req, res) => {
     try {
-        // Validação básica
-        if (!req.body.name || req.body.name.trim() === '') {
-            return res.status(400).json({ message: 'Nome do aluno é obrigatório.' });
-        }
-
-        const alunosCadastrados = lerJson(alunosCadastradosPath);
+        const getResponse = await axios.get(`${JSONBIN_API_URL}/latest`, { headers: jsonBinHeaders });
+        const alunosCadastrados = getResponse.data.record || [];
         
-        // Pega o último ID para gerar o próximo
         const ultimoId = alunosCadastrados.length > 0 ? Math.max(...alunosCadastrados.map(a => a.id || 0)) : 0;
-        
         const novoAluno = {
             id: ultimoId + 1,
             nome: req.body.name,
             autista: req.body.diagnosis === 'autista',
-            laudo: req.body.report || null,
-            salaId: req.body.class ? parseInt(req.body.class.split('_')[1]) : null,
-            dataNascimento: req.body.birthDate,
-            telefone: req.body.phone,
-            observacoes: req.body.observations,
-            // Se uma imagem foi enviada, usa o caminho dela, senão usa a padrão
-            imagemUrl: req.file ? `images/${req.file.filename}` : 'images/perfil_padrao.jpg'
+            imagemUrl: 'images/perfil_padrao.jpg',
+            // ... outros campos ...
         };
 
         alunosCadastrados.push(novoAluno);
-        salvarJson(alunosCadastradosPath, alunosCadastrados);
-
-        console.log(`[API] Novo aluno '${novoAluno.nome}' salvo em alunosCadastrados.json.`);
+        await axios.put(JSONBIN_API_URL, alunosCadastrados, { headers: jsonBinHeaders });
+        
         res.status(201).json(novoAluno);
-
     } catch (error) {
-        console.error('API ERRO ao cadastrar aluno:', error);
-        res.status(500).json({ message: 'Erro interno do servidor ao processar o cadastro.' });
+        res.status(500).json({ message: 'Erro ao cadastrar aluno na nuvem.' });
     }
 });
-// ============================================================
 
 
-// ==========================================================
-// ROTA DE FALLBACK E INICIALIZAÇÃO
-// ==========================================================
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-});
-
-app.listen(PORT, () => {
-    console.log("======================================================");
-    console.log("✅ SERVIDOR COMPLETO COM CADASTRO RODANDO NA PORTA " + PORT);
-    console.log(`-> Modo inicial: ${simuladorAtivo ? 'ATIVO' : 'INATIVO'}`);
-    console.log("======================================================");
-});
+// Rotas de Fallback e Inicialização
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
+app.listen(PORT, () => console.log(`🚀 Servidor HÍBRIDO rodando na porta ${PORT}`));
