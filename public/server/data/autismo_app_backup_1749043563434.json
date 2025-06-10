@@ -1,0 +1,114 @@
+{
+  "salas": [
+    {
+      "id": 1,
+      "nome": "Sala Arco-Íris",
+      "adaptada": true,
+      "alunos": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 2,
+      "nome": "Sala Estrelas",
+      "adaptada": false,
+      "alunos": [
+        3
+      ]
+    },
+    {
+      "id": 3,
+      "nome": "Laboratório Criativo",
+      "adaptada": true,
+      "alunos": [
+        4
+      ]
+    }
+  ],
+  "alunos": [
+    {
+      "id": 1,
+      "nome": "Lucas Mendes",
+      "autista": true,
+      "laudo": "TEA Nível 1. Hipersensibilidade auditiva. Interesse focado em trens e mapas. Ótima memória visual.",
+      "salaId": 1,
+      "dataNascimento": "2016-05-20",
+      "responsavel": "Fernanda Mendes",
+      "telefone": "(11) 98877-6655",
+      "observacoes": "Prefere rotina e previsibilidade. Usar fones redutores de ruído em ambientes barulhentos. Comunicar transições com antecedência."
+    },
+    {
+      "id": 2,
+      "nome": "Beatriz Costa",
+      "autista": false,
+      "laudo": null,
+      "salaId": 1,
+      "dataNascimento": "2017-01-15",
+      "responsavel": "Ricardo Costa",
+      "telefone": "(21) 97766-5544",
+      "observacoes": "Muito participativa e comunicativa."
+    },
+    {
+      "id": 3,
+      "nome": "Gabriel Alves",
+      "autista": true,
+      "laudo": "TEA Nível 2. Dificuldades na interação social recíproca. Pode necessitar de apoio para iniciar e manter conversas.",
+      "salaId": 2,
+      "dataNascimento": "2015-09-03",
+      "responsavel": "Carla Alves",
+      "telefone": "(31) 96655-4433",
+      "observacoes": "Responde bem a reforço positivo. Gosta de desenhar. Pausas curtas podem ser benéficas."
+    },
+    {
+      "id": 4,
+      "nome": "Júlia Ferreira",
+      "autista": false,
+      "laudo": null,
+      "salaId": 3,
+      "dataNascimento": "2016-11-12",
+      "responsavel": "Márcio Ferreira",
+      "telefone": "(41) 95544-3322",
+      "observacoes": "Curiosa e adora atividades em grupo."
+    }
+  ],
+  "relatorios": [
+    {
+      "id": 1,
+      "salaId": 1,
+      "tipo": "chamada",
+      "data": "2025-06-02T12:47:48.013Z",
+      "conteudo": {
+        "presentes": 2,
+        "ausentes": 0,
+        "duracao": "00:05:12"
+      }
+    },
+    {
+      "id": 2,
+      "tipo": "incidente",
+      "data": "2025-06-03T12:47:48.013Z",
+      "conteudo": {
+        "alunoId": 1,
+        "descricao": "Ficou agitado durante a atividade de pintura em grupo. Oferecido espaço calmo.",
+        "hora": "10:15"
+      }
+    },
+    {
+      "id": 3,
+      "tipo": "incidente",
+      "data": "2025-06-04T12:47:48.013Z",
+      "conteudo": {
+        "alunoId": 3,
+        "descricao": "Recusou-se a participar da roda de história. Mostrou interesse após a oferta de um livro sobre seu tema preferido.",
+        "hora": "14:30"
+      }
+    }
+  ],
+  "configuracoes": {
+    "tema": "light",
+    "notificacoes": true,
+    "limiteBarulho": 70,
+    "simulacaoAtiva": true
+  }
+}

@@ -1,0 +1,60 @@
+[
+  {
+    "id": 5,
+    "nome": "JUAN BRANCO",
+    "autista": false,
+    "laudo": "qqq",
+    "salaId": 1,
+    "dataNascimento": "2006-05-14",
+    "responsavel": "Não definido",
+    "telefone": "2323322323232323",
+    "observacoes": "qqq",
+    "imagemUrl": "images/perfil_padrao.jpg"
+  },
+  {
+    "id": 9,
+    "nome": "Renan Anger",
+    "autista": true,
+    "laudo": null,
+    "salaId": 2,
+    "dataNascimento": "2006-01-02",
+    "responsavel": "Não definido",
+    "telefone": "11323223323322",
+    "observacoes": "",
+    "imagemUrl": "images/perfil_padrao.jpg"
+  },
+  {
+    "id": 10,
+    "nome": "rfeeqesdereddDAADSSda",
+    "autista": false,
+    "laudo": null,
+    "salaId": 1,
+    "dataNascimento": "2007-01-01",
+    "responsavel": "Não definido",
+    "telefone": "",
+    "observacoes": "",
+    "imagemUrl": "images/perfil_padrao.jpg"
+  },
+  {
+    "id": 11,
+    "nome": "isaque sartor",
+    "autista": true,
+    "laudo": "12121",
+    "salaId": 2,
+    "dataNascimento": "2006-01-09",
+    "telefone": "2323322323232323",
+    "observacoes": "12211212",
+    "imagemUrl": "images/perfil_padrao.jpg"
+  },
+  {
+    "id": 12,
+    "nome": "jujuba",
+    "autista": false,
+    "laudo": null,
+    "salaId": 1,
+    "dataNascimento": "2003-02-10",
+    "telefone": "21212121",
+    "observacoes": "",
+    "imagemUrl": "images/aluno-1749491593337-726706983.jpeg"
+  }
+]
