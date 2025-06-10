@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', function () {
     console.log("Silent Sense APP (Novo Design V4) DOM Carregado - Iniciando Script...");
 
     // --- CONFIGURAÇÕES GLOBAIS ---
-    const API_BASE_URL = 'http://localhost:3000/api'; // AJUSTE SE NECESSÁRIO
+    const API_BASE_URL = 'https://silentsense-1.onrender.com/api';
     let currentClientTheme = localStorage.getItem('appTheme') || 'light';
 
     // --- SELEÇÃO DE ELEMENTOS DO DOM ---
