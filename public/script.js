@@ -124,6 +124,11 @@ let currentClientTheme = localStorage.getItem('appTheme') || 'light';
     let currentSalaChamadaId = null;
     let chamadaCurrentSeconds = 0;
     let chamadaTimerInterval;
+
+let podeRegistrarIncidente = true; // <<<<<<< ADICIONE ESTA LINHA
+let dashboardNoiseChartInstance, dashboardIncidentsChartInstance, profileAlunoIncidentsChartInstance;
+let isIncidentCooldown = false;
+// ...
     
     let cachedSalas = [];
     let cachedAlunos = [];
@@ -519,11 +524,8 @@ async function loadCoreDataFromServer() {
                 // ===================================================================
         // PASSO 3: ATUALIZAR O RESTO DA DASHBOARD COM BASE NO MODO
         // ===================================================================
-        if (cachedConfigs.simulacaoAtiva) {
-            // --- MODO SIMULAÇÃO ATIVO ---
-            // Usa os dados reais de contagem de alunos que já calculamos,
-            // e simula o resto (ruído, incidentes).
-            
+               if (cachedConfigs.simulacaoAtiva) {
+            // --- MODO SIMULAÇÃO (Nenhuma mudança aqui) ---
             const currentNoise = Math.floor(Math.random() * 70) + 30;
             if (dashNoiseLevelBarEl) dashNoiseLevelBarEl.style.width = `${Math.min(100, currentNoise)}%`;
             if (dashNoiseValueEl) dashNoiseValueEl.textContent = `${currentNoise} dB`;
@@ -537,26 +539,16 @@ async function loadCoreDataFromServer() {
                 delete dashToggleSalaBtn.dataset.salaId;
             }
         } else {
-            // --- MODO NORMAL (REAL) ---
-            // Usa os dados reais do sensor que estão chegando via WebSocket.
+            // --- MODO NORMAL (REAL) COM A NOVA LÓGICA DE INCIDENTES ---
 
-            let valorDoSensor = ultimoValorSensorReal; // Pega da variável global
-            let displayValor = "---";
+            // Parte 1: Processa o ruído do sensor (como antes)
+            let valorDoSensor = ultimoValorSensorReal;
             let noiseNumber = 0;
-
-            // Extrai o número da string "dB:75"
             if (typeof valorDoSensor === 'string' && valorDoSensor.includes(':')) {
-                const partes = valorDoSensor.split(':');
-                noiseNumber = parseInt(partes[1], 10) || 0;
-                displayValor = `${noiseNumber} dB`;
-            } else {
-                // Se o valor não for no formato esperado, mostra o status (ex: "Conectando...")
-                displayValor = valorDoSensor;
+                noiseNumber = parseInt(valorDoSensor.split(':')[1], 10) || 0;
             }
-
-            // ATUALIZA A UI DO RUÍDO COM OS DADOS REAIS
+            if (dashNoiseValueEl) dashNoiseValueEl.textContent = (typeof valorDoSensor === 'string' && valorDoSensor.includes(':')) ? `${noiseNumber} dB` : valorDoSensor;
             if (dashNoiseLevelBarEl) dashNoiseLevelBarEl.style.width = `${Math.min(100, noiseNumber)}%`;
-            if (dashNoiseValueEl) dashNoiseValueEl.textContent = displayValor;
             if (dashMaxNoiseEl) {
                 const maxAtual = parseInt(dashMaxNoiseEl.textContent || "0");
                 if (noiseNumber > maxAtual) {
@@ -564,18 +556,46 @@ async function loadCoreDataFromServer() {
                 }
             }
             
-            // O resto da sua lógica para o modo real continua a mesma
-            const hojeStr = new Date().toISOString().split('T')[0];
-            const incidentesDeHoje = cachedRelatorios ? cachedRelatorios.filter(r => r.tipo === 'incidente' && r.data?.startsWith(hojeStr)) : [];
-            if (dashIncidentesHojeEl) dashIncidentesHojeEl.textContent = incidentesDeHoje.length;
+            // ==========================================================
+            //       LÓGICA DE DETECÇÃO DE INCIDENTES EM TEMPO REAL
+            // ==========================================================
+            // Garante que a variável exista antes de usá-la
+            if (typeof podeRegistrarIncidente === 'undefined') {
+                podeRegistrarIncidente = true;
+            }
 
-            const incidentesAutistasHojeCount = cachedAlunos ? incidentesDeHoje.filter(r => cachedAlunos.find(a => a.id === r.conteudo?.alunoId)?.autista).length : 0;
-            if (dashIncidentesAutistasEl) dashIncidentesAutistasEl.textContent = incidentesAutistasHojeCount;
+            // Se o ruído passou de 60 E a trava estiver DESLIGADA...
+            if (noiseNumber >= 95 && podeRegistrarIncidente) {
+                // 1. Liga a trava para não registrar de novo imediatamente
+                podeRegistrarIncidente = false;
+                
+                // 2. Pega o número atual na tela e soma +1
+                let contagemAtual = parseInt(dashIncidentesHojeEl.textContent || "0");
+                dashIncidentesHojeEl.textContent = contagemAtual + 1;
+                
+                // (Opcional) Podemos fazer o mesmo para o contador de autistas
+                let contagemAutistasAtual = parseInt(dashIncidentesAutistasEl.textContent || "0");
+                dashIncidentesAutistasEl.textContent = contagemAutistasAtual + 1;
 
+                showUINotification("Incidente de ruído alto detectado!", "warning");
+                
+                // 3. Desliga a trava depois de 1 minuto (60000 ms)
+                setTimeout(() => {
+                    podeRegistrarIncidente = true;
+                    console.log("Cooldown do incidente finalizado. Pronto para detectar novamente.");
+                }, 60000); 
+            }
+            // ==========================================================
+
+
+            // Parte 3: Lógica para o status da sala (continua a mesma)
             const salaPrincipalId = cachedConfigs.salaPrincipalDashboardId || (cachedSalas && cachedSalas[0]?.id);
             const salaPrincipal = cachedSalas ? cachedSalas.find(s => s.id === salaPrincipalId) : null;
-            if (dashSalaStatusEl && salaPrincipal) dashSalaStatusEl.textContent = salaPrincipal.adaptada ? "Adaptada" : "Padrão";
-            else if (dashSalaStatusEl) dashSalaStatusEl.textContent = "N/A";
+            if (dashSalaStatusEl && salaPrincipal) {
+                dashSalaStatusEl.textContent = salaPrincipal.adaptada ? "Adaptada" : "Padrão";
+            } else if (dashSalaStatusEl) {
+                dashSalaStatusEl.textContent = "N/A";
+            }
 
             if (dashToggleSalaBtn) {
                 dashToggleSalaBtn.disabled = !salaPrincipal;
