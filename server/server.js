@@ -3,7 +3,7 @@
 
 const express = require('express');
 const path = require('path');
-@@ -7,6 +7,7 @@ const axios = require('axios');
+const axios = require('axios');
 const fs = require('fs');
 
 const app = express();
@@ -11,7 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- CONFIGURAÇÃO DO JSONBIN.IO ---
-@@ -18,96 +19,109 @@ const jsonBinHeaders = {
+const jsonBinHeaders = {
 'X-Master-Key': JSONBIN_API_KEY
 };
 
