@@ -1,19 +1,18 @@
 {
-  "name": "autismo-app",
+  "name": "silentsense-server-render",
   "version": "1.0.0",
-  "description": "Aplicativo para orientação de sala e apoio a alunos autistas",
+  "description": "Servidor principal na nuvem para o Silent Sense APP",
   "main": "server/server.js",
   "scripts": {
-    "start": "node server/server.js",
-    "dev": "nodemon server/server.js"
+    "start": "node server/server.js"
+  },
+  "engines": {
+    "node": "18.x"
   },
   "dependencies": {
-    "axios": "^1.7.2",  
+    "axios": "^1.7.2",
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "ws": "^8.13.0" 
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
+    "ws": "^8.17.0"
   }
 }
