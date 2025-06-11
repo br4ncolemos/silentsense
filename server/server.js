@@ -1,4 +1,4 @@
-// server/server.js (VERSÃO FINAL PARA O RENDER - COM WEBSOCKET)
+// server/server.js (ESTE É O CÓDIGO PARA O GITHUB/RENDER)
 
 // --- Módulos Essenciais ---
 const express = require('express');
@@ -30,6 +30,7 @@ let ultimoDadoDoSensor = "Gateway do sensor desconectado.";
 // --- MIDDLEWARES ---
 app.use(cors({ origin: '*' }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ==========================================================
@@ -44,6 +45,7 @@ wss.on('connection', ws => {
     // Envia o último valor conhecido para o cliente que acabou de se conectar
     ws.send(JSON.stringify({ type: 'initial_sensor_value', value: ultimoDadoDoSensor }));
 
+    // Lógica que roda quando o servidor recebe uma mensagem via WebSocket
     ws.on('message', message => {
         try {
             const data = JSON.parse(message);
@@ -73,7 +75,7 @@ wss.on('connection', ws => {
 // ROTAS DA API (HTTP NORMAL)
 // ==========================================================
 
-// Rota para o app pegar o último valor do sensor
+// Rota para um cliente pegar o último valor do sensor via fetch
 app.get('/api/sensor', (req, res) => {
     res.json({ valor: ultimoDadoDoSensor });
 });
@@ -82,13 +84,20 @@ app.get('/api/sensor', (req, res) => {
 app.get('/api/alunos', async (req, res) => {
     if (simuladorAtivo) {
         try {
-            res.json(JSON.parse(fs.readFileSync(alunosPadraoPath, 'utf8')));
-        } catch (error) { res.json([]); }
+            const data = fs.readFileSync(alunosPadraoPath, 'utf8');
+            res.json(JSON.parse(data));
+        } catch (error) {
+            console.error("Erro ao ler alunosPadrao.json:", error);
+            res.json([]);
+        }
     } else {
         try {
             const response = await axios.get(`${JSONBIN_API_URL}/latest`, { headers: jsonBinHeaders });
             res.json(response.data.record || []);
-        } catch (error) { res.status(500).json({ message: 'Erro ao buscar dados da nuvem.' }); }
+        } catch (error) {
+            console.error("Erro ao buscar alunos do JSONBin:", error.response?.data);
+            res.status(500).json({ message: 'Erro ao buscar dados da nuvem.' });
+        }
     }
 });
 
@@ -98,7 +107,9 @@ app.put('/api/configuracoes', (req, res) => {
     if (typeof novoEstado === 'boolean') {
         simuladorAtivo = novoEstado;
         res.json({ success: true, simulacaoAtiva: simuladorAtivo });
-    } else { res.status(400).json({ success: false, message: 'Valor inválido.' }); }
+    } else {
+        res.status(400).json({ success: false, message: 'Valor inválido.' });
+    }
 });
 
 // Rota para cadastrar novos alunos (salva no JSONBin)
@@ -112,20 +123,27 @@ app.post('/api/alunos', async (req, res) => {
             id: ultimoId + 1,
             nome: req.body.name,
             autista: req.body.diagnosis === 'autista',
-            // ... adicione outros campos do seu formulário aqui
+            laudo: req.body.report || null,
+            salaId: req.body.class ? parseInt(req.body.class.split('_')[1]) : null,
+            dataNascimento: req.body.birthDate,
+            telefone: req.body.phone,
+            observacoes: req.body.observations
         };
 
         alunosCadastrados.push(novoAluno);
         await axios.put(JSONBIN_API_URL, alunosCadastrados, { headers: jsonBinHeaders });
         res.status(201).json(novoAluno);
     } catch (error) {
+        console.error('API ERRO ao cadastrar aluno:', error.response?.data || error.message);
         res.status(500).json({ message: 'Erro ao cadastrar aluno na nuvem.' });
     }
 });
 
 
 // --- ROTA DE FALLBACK E INICIALIZAÇÃO ---
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+});
 
 // IMPORTANTE: Usamos server.listen para ligar o servidor HTTP e o WebSocket juntos
 server.listen(PORT, () => {
