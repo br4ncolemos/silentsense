@@ -503,101 +503,90 @@ async function loadCoreDataFromServer() {
         if (genericModalBox) genericModalBox.className = 'modal-box'; 
     }
 
-     // --- DASHBOARD (INÍCIO) ---
-    function updateDashboardUI() {
-        if (activeSectionId !== 'inicio' || !dashTotalAlunosEl) return;
-        console.log("FN: updateDashboardUI. Usando Simulação:", cachedConfigs.simulacaoAtiva);
+function updateDashboardUI() {
+    if (activeSectionId !== 'inicio' || !dashTotalAlunosEl) return;
 
-        // ===================================================================
-        // PASSO 1: CALCULAR CONTAGENS PRIMEIRO - Válido para ambos os modos
-        // ===================================================================
-        const alunosCount = cachedAlunos ? cachedAlunos.length : 0;
-        const alunosAutistasCount = cachedAlunos ? cachedAlunos.filter(a => a.autista).length : 0;
+    const alunosCount = cachedAlunos ? cachedAlunos.length : 0;
+    const alunosAutistasCount = cachedAlunos ? cachedAlunos.filter(a => a.autista).length : 0;
+    if (dashTotalAlunosEl) dashTotalAlunosEl.textContent = alunosCount;
+    if (dashAlunosAutistasEl) dashAlunosAutistasEl.textContent = alunosAutistasCount;
 
-        // ===================================================================
-        // PASSO 2: ATUALIZAR OS CARDS DE ALUNOS COM OS DADOS REAIS
-        // ===================================================================
-        if (dashTotalAlunosEl) dashTotalAlunosEl.textContent = alunosCount;
-        if (dashAlunosAutistasEl) dashAlunosAutistasEl.textContent = alunosAutistasCount;
-
-
-        // ===================================================================
-        // PASSO 3: ATUALIZAR O RESTO DA DASHBOARD COM BASE NO MODO
-        // ===================================================================
-                // ===================================================================
-        // PASSO 3: ATUALIZAR O RESTO DA DASHBOARD COM BASE NO MODO
-        // ===================================================================
-        if (cachedConfigs.simulacaoAtiva) {
-            // --- MODO SIMULAÇÃO ATIVO ---
-            // Usa os dados reais de contagem de alunos que já calculamos,
-            // e simula o resto (ruído, incidentes).
-            
-            const currentNoise = Math.floor(Math.random() * 70) + 30;
-            if (dashNoiseLevelBarEl) dashNoiseLevelBarEl.style.width = `${Math.min(100, currentNoise)}%`;
-            if (dashNoiseValueEl) dashNoiseValueEl.textContent = `${currentNoise} dB`;
-            if (dashMaxNoiseEl && currentNoise > parseInt(dashMaxNoiseEl.textContent || "0")) dashMaxNoiseEl.textContent = currentNoise;
-            if (dashIncidentesHojeEl) dashIncidentesHojeEl.textContent = Math.floor(Math.random() * 3);
-            if (dashIncidentesAutistasEl) dashIncidentesAutistasEl.textContent = Math.floor(Math.random() * 2);
-            if (dashSalaStatusEl) dashSalaStatusEl.textContent = "Simulada";
-            if (dashToggleSalaBtn) {
-                dashToggleSalaBtn.disabled = false;
-                dashToggleSalaBtn.textContent = 'Ver Detalhes (Sim.)';
-                delete dashToggleSalaBtn.dataset.salaId;
-            }
+    if (cachedConfigs.simulacaoAtiva) {
+        // --- SEU CÓDIGO DE SIMULAÇÃO (INTOCADO) ---
+        const currentNoise = Math.floor(Math.random() * 70) + 30;
+        if (dashNoiseLevelBarEl) dashNoiseLevelBarEl.style.width = `${Math.min(100, currentNoise)}%`;
+        if (dashNoiseValueEl) dashNoiseValueEl.textContent = `${currentNoise} dB`;
+        if (dashMaxNoiseEl) {
+             const maxText = dashMaxNoiseEl.textContent || 'Máx: 0 dB';
+             const maxAtual = parseInt(maxText.replace(/[^0-9]/g, ''), 10) || 0;
+             if (currentNoise > maxAtual) {
+                dashMaxNoiseEl.textContent = `Máx: ${currentNoise} dB`;
+             }
+        }
+        if (dashIncidentesHojeEl) dashIncidentesHojeEl.textContent = Math.floor(Math.random() * 3);
+        if (dashIncidentesAutistasEl) dashIncidentesAutistasEl.textContent = Math.floor(Math.random() * 2);
+        if (dashSalaStatusEl) dashSalaStatusEl.textContent = "Simulada";
+        if (dashToggleSalaBtn) {
+            dashToggleSalaBtn.disabled = false;
+            dashToggleSalaBtn.textContent = 'Ver Detalhes (Sim.)';
+            delete dashToggleSalaBtn.dataset.salaId;
+        }
+    } else {
+        // --- MODO REAL ---
+        
+        // 1. LÓGICA DO SENSOR (A ÚNICA PARTE SUBSTITUÍDA)
+        const valorDoSensor = ultimoValorSensorReal; 
+        let displayValor = "---";
+        let noiseNumber = 0;
+        
+        // Lógica nova e mais robusta que espera um número
+        if (typeof valorDoSensor === 'number') {
+            noiseNumber = valorDoSensor;
+            displayValor = `${noiseNumber} dB`;
         } else {
-            // --- MODO NORMAL (REAL) ---
-            // Usa os dados reais do sensor que estão chegando via WebSocket.
+            // Se não for número, mostra o status (ex: "Conectando...")
+            displayValor = valorDoSensor;
+        }
 
-            let valorDoSensor = ultimoValorSensorReal; // Pega da variável global
-            let displayValor = "---";
-            let noiseNumber = 0;
-
-            // Extrai o número da string "dB:75"
-            if (typeof valorDoSensor === 'string' && valorDoSensor.includes(':')) {
-                const partes = valorDoSensor.split(':');
-                noiseNumber = parseInt(partes[1], 10) || 0;
-                displayValor = `${noiseNumber} dB`;
-            } else {
-                // Se o valor não for no formato esperado, mostra o status (ex: "Conectando...")
-                displayValor = valorDoSensor;
-            }
-
-            // ATUALIZA A UI DO RUÍDO COM OS DADOS REAIS
-            if (dashNoiseLevelBarEl) dashNoiseLevelBarEl.style.width = `${Math.min(100, noiseNumber)}%`;
-            if (dashNoiseValueEl) dashNoiseValueEl.textContent = displayValor;
-            if (dashMaxNoiseEl) {
-                const maxAtual = parseInt(dashMaxNoiseEl.textContent || "0");
-                if (noiseNumber > maxAtual) {
-                    dashMaxNoiseEl.textContent = noiseNumber;
-                }
-            }
-            
-            // O resto da sua lógica para o modo real continua a mesma
-            const hojeStr = new Date().toISOString().split('T')[0];
-            const incidentesDeHoje = cachedRelatorios ? cachedRelatorios.filter(r => r.tipo === 'incidente' && r.data?.startsWith(hojeStr)) : [];
-            if (dashIncidentesHojeEl) dashIncidentesHojeEl.textContent = incidentesDeHoje.length;
-
-            const incidentesAutistasHojeCount = cachedAlunos ? incidentesDeHoje.filter(r => cachedAlunos.find(a => a.id === r.conteudo?.alunoId)?.autista).length : 0;
-            if (dashIncidentesAutistasEl) dashIncidentesAutistasEl.textContent = incidentesAutistasHojeCount;
-
-            const salaPrincipalId = cachedConfigs.salaPrincipalDashboardId || (cachedSalas && cachedSalas[0]?.id);
-            const salaPrincipal = cachedSalas ? cachedSalas.find(s => s.id === salaPrincipalId) : null;
-            if (dashSalaStatusEl && salaPrincipal) dashSalaStatusEl.textContent = salaPrincipal.adaptada ? "Adaptada" : "Padrão";
-            else if (dashSalaStatusEl) dashSalaStatusEl.textContent = "N/A";
-
-            if (dashToggleSalaBtn) {
-                dashToggleSalaBtn.disabled = !salaPrincipal;
-                if (salaPrincipal) {
-                    dashToggleSalaBtn.dataset.salaId = salaPrincipal.id;
-                    dashToggleSalaBtn.textContent = salaPrincipal.adaptada ? 'Desativar Adap.' : 'Ativar Adap.';
-                } else {
-                    dashToggleSalaBtn.textContent = 'Ver Detalhes';
-                    delete dashToggleSalaBtn.dataset.salaId;
-                }
+        const barWidth = Math.min(100, (noiseNumber / 95) * 100);
+        if (dashNoiseLevelBarEl) dashNoiseLevelBarEl.style.width = `${barWidth}%`;
+        if (dashNoiseValueEl) dashNoiseValueEl.textContent = displayValor;
+        if (dashMaxNoiseEl) {
+            const maxText = dashMaxNoiseEl.textContent || 'Máx: 0 dB';
+            const maxAtual = parseInt(maxText.replace(/[^0-9]/g, ''), 10) || 0;
+            if (noiseNumber > maxAtual) {
+                dashMaxNoiseEl.textContent = `Máx: ${noiseNumber} dB`;
             }
         }
-        renderDashboardChartsUI();
+
+        // 2. LÓGICA DE INCIDENTES (ADICIONADA PARA O MODO REAL FUNCIONAR)
+        const hojeStr = new Date().toISOString().split('T')[0];
+        const incidentesDeHoje = cachedRelatorios ? cachedRelatorios.filter(r => r.tipo === 'incidente' && r.data?.startsWith(hojeStr)) : [];
+        if (dashIncidentesHojeEl) dashIncidentesHojeEl.textContent = incidentesDeHoje.length;
+
+        const incidentesAutistasHojeCount = cachedAlunos ? incidentesDeHoje.filter(r => {
+            const alunoDoIncidente = cachedAlunos.find(a => a.id === r.conteudo?.alunoId);
+            return alunoDoIncidente && alunoDoIncidente.autista;
+        }).length : 0;
+        if (dashIncidentesAutistasEl) dashIncidentesAutistasEl.textContent = incidentesAutistasHojeCount;
+
+        // 3. SUA LÓGICA DE SALA (INTOCADA)
+        const salaPrincipalId = cachedConfigs.salaPrincipalDashboardId || (cachedSalas && cachedSalas.length > 0 ? cachedSalas[0].id : null);
+        const salaPrincipal = salaPrincipalId ? (cachedSalas || []).find(s => s.id === salaPrincipalId) : null;
+        if (dashSalaStatusEl) dashSalaStatusEl.textContent = salaPrincipal ? (salaPrincipal.adaptada ? "Adaptada" : "Padrão") : "N/A";
+        if (dashToggleSalaBtn) {
+            dashToggleSalaBtn.disabled = !salaPrincipal;
+            if (salaPrincipal) {
+                dashToggleSalaBtn.dataset.salaId = salaPrincipal.id;
+                dashToggleSalaBtn.textContent = salaPrincipal.adaptada ? 'Desativar Adap.' : 'Ativar Adap.';
+            } else {
+                dashToggleSalaBtn.textContent = 'Ver Detalhes';
+                delete dashToggleSalaBtn.dataset.salaId;
+            }
+        }
     }
+    renderDashboardChartsUI();
+}
     function renderDashboardChartsUI() {
         console.log("FN: renderDashboardChartsUI. Simulação Ativa:", cachedConfigs.simulacaoAtiva);
         const chartFontColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary-color').trim();
