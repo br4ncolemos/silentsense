@@ -1,105 +1,190 @@
-// server/server.js (VERSÃO SIMPLIFICADA E ESTÁVEL PARA O RENDER)
+// server/server.js (VERSÃO FINAL COMPLETA COM CRUD)
+// server/server.js (VERSÃO FINAL, ALINHADA COM O FRONTEND)
 
 const express = require('express');
-const http = require('http');
-const WebSocket = require('ws');
 const path = require('path');
-const cors = require('cors');
-const axios = require('axios');
+@@ -7,6 +7,7 @@ const axios = require('axios');
+const fs = require('fs');
 
 const app = express();
+// O Render define a porta automaticamente, mas usamos 3000 para testes locais
 const PORT = process.env.PORT || 3000;
 
 // --- CONFIGURAÇÃO DO JSONBIN.IO ---
-const JSONBIN_API_KEY = "$2a$10$Jay/xyfmuFUEsGq2MX6iquj7OkEpzQAAk4m3dod/J9C2X45IqAdeG";
-const ALUNOS_BIN_ID = "684852998960c979a5a79a0d";
-const JSONBIN_API_URL = `https://api.jsonbin.io/v3/b/${ALUNOS_BIN_ID}`;
-const jsonBinHeaders = {
-    'Content-Type': 'application/json',
-    'X-Master-Key': JSONBIN_API_KEY
+@@ -18,96 +19,109 @@ const jsonBinHeaders = {
+'X-Master-Key': JSONBIN_API_KEY
 };
 
-// --- ESTADO DO SERVIDOR ---
-let ultimoDadoDoSensor = "Gateway desconectado.";
+// --- ESTADO DO MODO DE SIMULAÇÃO ---
+let simuladorAtivo = true;
+const alunosPadraoPath = path.join(__dirname, 'data', 'alunosPadrao.json');
 
 // --- MIDDLEWARES ---
-app.use(cors());
+app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'] }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
+// Configuração de CORS robusta para evitar o 'Failed to fetch'
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Master-Key']
+}));
 
 // ==========================================================
-// SERVIDOR WEBSOCKET
-// ==========================================================
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
-
-wss.on('connection', ws => {
-    console.log('[Render] Cliente WebSocket conectado.');
-    ws.send(JSON.stringify({ type: 'initial_sensor_value', value: ultimoDadoDoSensor }));
-
-    ws.on('message', message => {
-        try {
-            const data = JSON.parse(message);
-            if (data.type === 'sensor_update') {
-                ultimoDadoDoSensor = data.value;
-                wss.clients.forEach(client => {
-                    if (client.readyState === WebSocket.OPEN) {
-                        client.send(JSON.stringify({ type: 'sensor_update', value: ultimoDadoDoSensor }));
-                    }
-                });
-            }
-        } catch (e) { console.error('Erro ao processar mensagem WebSocket:', e); }
-    });
-});
-
-// ==========================================================
-// ROTAS DA API (HTTP)
+// ROTAS DA API
 // ==========================================================
 
-// Lê os alunos SEMPRE do JSONBin (removemos a complexidade da simulação)
-app.get('/api/alunos', async (req, res) => {
+// --- GET /api/alunos --- (Ler todos)
+app.get('/api/alunos', async (req, res) => { /* ... seu código continua igual ... */ });
+
+// --- PUT /api/configuracoes ---
+app.put('/api/configuracoes', (req, res) => { /* ... seu código continua igual ... */ });
+
+// --- POST /api/alunos --- (Criar novo)
+app.post('/api/alunos', async (req, res) => { /* ... seu código continua igual ... */ });
+// Middlewares para entender os dados da requisição
+app.use(express.json()); // Essencial para ler corpos de requisição JSON
+app.use(express.urlencoded({ extended: true })); // Para dados de formulário
+app.use(express.static(path.join(__dirname, '..', 'public'))); // Serve os arquivos do frontend
+
+
+// ==========================================================
+// NOVAS ROTAS PARA EDIÇÃO E EXCLUSÃO
+// ROTAS DA API
+// ==========================================================
+
+// --- GET /api/alunos/:id --- (Ler um aluno específico)
+app.get('/api/alunos/:id', async (req, res) => {
     try {
-        const response = await axios.get(`${JSONBIN_API_URL}/latest`, { headers: jsonBinHeaders });
-        res.json(response.data.record || []);
-    } catch (error) {
-        console.error("Erro ao buscar alunos do JSONBin:", error.response?.data);
-        res.status(500).json({ message: 'Erro ao buscar dados da nuvem.' });
-    }
-});
-
-// Cadastra um novo aluno SEMPRE no JSONBin
-app.post('/api/alunos', async (req, res) => {
-    try {
+        const alunoId = parseInt(req.params.id);
         const getResponse = await axios.get(`${JSONBIN_API_URL}/latest`, { headers: jsonBinHeaders });
         const alunos = getResponse.data.record || [];
-        const ultimoId = alunos.length > 0 ? Math.max(...alunos.map(a => a.id || 0)) : 0;
+        const alunoEncontrado = alunos.find(a => a.id === alunoId);
         
+        if (alunoEncontrado) {
+            res.json(alunoEncontrado);
+        } else {
+            res.status(404).json({ message: "Aluno não encontrado." });
+// --- ROTA GET /api/alunos --- (Lê os alunos)
+app.get('/api/alunos', async (req, res) => {
+    if (simuladorAtivo) {
+        console.log("Modo Simulação: Lendo de alunosPadrao.json local...");
+        try {
+            const data = fs.readFileSync(alunosPadraoPath, 'utf8');
+            res.json(JSON.parse(data));
+        } catch (error) {
+            console.error("Erro ao ler alunosPadrao.json:", error);
+            res.json([]);
+        }
+    } else {
+        try {
+            console.log("Modo Real: Buscando alunos do JSONBin...");
+            const response = await axios.get(`${JSONBIN_API_URL}/latest`, { headers: jsonBinHeaders });
+            res.json(response.data.record || []);
+        } catch (error) {
+            console.error("Erro ao buscar alunos do JSONBin:", error.response?.data);
+            res.status(500).json({ message: 'Erro ao buscar dados da nuvem.' });
+}
+    } catch (error) {
+        res.status(500).json({ message: "Erro ao buscar aluno." });
+}
+});
+
+// --- PUT /api/alunos/:id --- (Editar um aluno)
+app.put('/api/alunos/:id', async (req, res) => {
+    try {
+        const alunoId = parseInt(req.params.id);
+        const getResponse = await axios.get(`${JSONBIN_API_URL}/latest`, { headers: jsonBinHeaders });
+        let alunos = getResponse.data.record || [];
+        
+        const index = alunos.findIndex(a => a.id === alunoId);
+
+        if (index !== -1) {
+            // Atualiza o objeto do aluno com os novos dados do corpo da requisição
+            alunos[index] = { ...alunos[index], ...req.body, id: alunoId };
+            // Salva a lista inteira de volta no JSONBin
+            await axios.put(JSONBIN_API_URL, alunos, { headers: jsonBinHeaders });
+            res.json(alunos[index]); // Retorna o aluno atualizado
+        } else {
+            res.status(404).json({ message: "Aluno não encontrado para editar." });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Erro ao editar aluno." });
+
+// --- ROTA PUT /api/configuracoes --- (Muda o modo de simulação)
+app.put('/api/configuracoes', (req, res) => {
+    const novoEstado = req.body.simulacaoAtiva;
+    if (typeof novoEstado === 'boolean') {
+        simuladorAtivo = novoEstado;
+        console.log(`[API] Modo Simulador alterado para: ${simuladorAtivo}`);
+        res.json({ success: true, simulacaoAtiva: simuladorAtivo });
+    } else {
+        res.status(400).json({ success: false, message: 'Valor inválido.' });
+}
+});
+
+// --- DELETE /api/alunos/:id --- (Excluir um aluno)
+app.delete('/api/alunos/:id', async (req, res) => {
+
+// --- ROTA POST /api/alunos --- (Cadastra um novo aluno)
+app.post('/api/alunos', async (req, res) => {
+try {
+        const alunoId = parseInt(req.params.id);
+        // Passo 1: Pega a lista atual de alunos do JSONBin
+const getResponse = await axios.get(`${JSONBIN_API_URL}/latest`, { headers: jsonBinHeaders });
+        let alunos = getResponse.data.record || [];
+
+        const novosAlunos = alunos.filter(a => a.id !== alunoId);
+        const alunosCadastrados = getResponse.data.record || [];
+
+        if (alunos.length === novosAlunos.length) {
+            return res.status(404).json({ message: "Aluno não encontrado para excluir." });
+        }
+        // Passo 2: Calcula o próximo ID
+        const ultimoId = alunosCadastrados.length > 0 ? Math.max(...alunosCadastrados.map(a => a.id || 0)) : 0;
+
+        // Salva a nova lista (sem o aluno excluído) de volta no JSONBin
+        await axios.put(JSONBIN_API_URL, novosAlunos, { headers: jsonBinHeaders });
+        res.status(204).send(); // 204 No Content é a resposta padrão para um DELETE bem-sucedido
+        // Passo 3: Cria o objeto do novo aluno com os dados recebidos do frontend
         const novoAluno = {
             id: ultimoId + 1,
-            nome: req.body.nome,
-            autista: req.body.autista,
-            // Adicione outros campos se precisar
+            nome: req.body.name, // Frontend envia 'name'
+            autista: req.body.diagnosis === 'autista', // Frontend envia 'diagnosis'
+            laudo: req.body.report || null,
+            salaId: req.body.class ? parseInt(req.body.class.split('_')[1]) : null,
+            dataNascimento: req.body.birthDate,
+            telefone: req.body.phone,
+            observacoes: req.body.observations
         };
 
-        alunos.push(novoAluno);
-        await axios.put(JSONBIN_API_URL, alunos, { headers: jsonBinHeaders });
+        // Passo 4: Adiciona o novo aluno à lista
+        alunosCadastrados.push(novoAluno);
+        
+        // Passo 5: Salva a lista inteira de volta no JSONBin
+        await axios.put(JSONBIN_API_URL, alunosCadastrados, { headers: jsonBinHeaders });
+        
+        console.log(`[API] Aluno '${novoAluno.nome}' salvo com sucesso no JSONBin.`);
+        // Retorna o objeto do novo aluno criado para o frontend
         res.status(201).json(novoAluno);
-    } catch (error) {
-        console.error('API ERRO ao cadastrar aluno:', error.response?.data || error.message);
+
+} catch (error) {
+        res.status(500).json({ message: "Erro ao excluir aluno." });
+        console.error('API ERRO ao cadastrar aluno no JSONBin:', error.response?.data || error.message);
         res.status(500).json({ message: 'Erro ao cadastrar aluno na nuvem.' });
-    }
+}
 });
+// ==========================================================
 
-// Rota do sensor
-app.get('/api/sensor', (req, res) => {
-    res.json({ valor: ultimoDadoDoSensor });
-});
 
+// Rota de Fallback e Inicialização
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
+app.listen(PORT, () => console.log(`🚀 Servidor COMPLETO COM CRUD rodando na porta ${PORT}`));
 // --- ROTA DE FALLBACK E INICIALIZAÇÃO ---
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
-server.listen(PORT, () => {
-    console.log(`🚀 Servidor ESTÁVEL rodando na porta ${PORT}`);
+app.listen(PORT, () => {
+    console.log(`🚀 Servidor FINAL E ALINHADO rodando na porta ${PORT}`);
 });
