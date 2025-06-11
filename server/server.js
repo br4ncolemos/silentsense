@@ -6,7 +6,6 @@ const cors = require('cors');
 const axios = require('axios');
 const fs = require('fs');
 // Importa as bibliotecas para comunicação serial
-const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
 
 const app = express();
