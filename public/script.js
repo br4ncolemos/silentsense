@@ -1,47 +1,41 @@
-document.addEventListener('DOMContentLoaded', function () {
-    console.log("Silent Sense APP (Novo Design V4) DOM Carregado - Iniciando Script...");
+// public/script.js (VERSÃO FINAL COM WEBSOCKET INTEGRADO)
 
-    // --- CONFIGURAÇÕES GLOBAIS ---
-// --- CONFIGURAÇÕES GLOBAIS ---
-const API_BASE_URL = 'https://silentsense-1.onrender.com/api'; // URL PÚBLICA CORRETA
-const WEBSOCKET_URL = 'wss://silentsense-1.onrender.com';     // URL WebSocket PÚBLICA
+document.addEventListener('DOMContentLoaded', function () {
+    console.log("Silent Sense APP DOM Carregado - Iniciando Script...");
+
+    // --- CONFIGURAÇÕES GLOBAIS E WEBSOCKET ---
+    const API_BASE_URL = 'https://silentsense-1.onrender.com/api';
+    const WEBSOCKET_URL = 'wss://silentsense-1.onrender.com';
+    let currentClientTheme = localStorage.getItem('appTheme') || 'light';
+    let ultimoValorSensorReal = "Conectando...";
 let currentClientTheme = localStorage.getItem('appTheme') || 'light';
+
+
 
     // ... linha anterior: let currentClientTheme = ...
 
     // ==========================================================
     // CÓDIGO WEBSOCKET - O "OUVIDO" DO SEU APP
     // ==========================================================
-    let ultimoValorSensorReal = "Conectando...";
-
-    function conectarWebSocket() {
-        console.log(`[App] Tentando conectar ao WebSocket em ${WEBSOCKET_URL}`);
+      function conectarWebSocket() {
         const ws = new WebSocket(WEBSOCKET_URL);
-
         ws.onopen = () => {
-            console.log('[App] ✅ Conectado ao servidor do Render via WebSocket!');
+            console.log('[App] ✅ Conectado ao WebSocket!');
             ultimoValorSensorReal = "Conectado";
             if (activeSectionId === 'inicio') updateDashboardUI();
         };
-
         ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.type === 'sensor_update' || data.type === 'initial_sensor_value') {
-                    ultimoValorSensorReal = data.value;
-                    if (activeSectionId === 'inicio') updateDashboardUI();
-                }
-            } catch (e) { console.error("Erro ao processar mensagem do WebSocket:", e); }
+            const data = JSON.parse(event.data);
+            if (data.type.includes('sensor_value')) {
+                ultimoValorSensorReal = data.value;
+                if (activeSectionId === 'inicio') updateDashboardUI();
+            }
         };
-
         ws.onclose = () => {
-            console.log('[App] ❌ Desconectado do servidor WebSocket. Tentando reconectar em 5s...');
             ultimoValorSensorReal = "Reconectando...";
             if (activeSectionId === 'inicio') updateDashboardUI();
             setTimeout(conectarWebSocket, 5000);
         };
-
-        ws.onerror = (error) => { console.error('[App] Erro no WebSocket:', error); };
     }
     // ==========================================================
 
@@ -61,8 +55,8 @@ let currentClientTheme = localStorage.getItem('appTheme') || 'light';
     const dashTotalAlunosEl = document.getElementById('dashTotalAlunos');
     const dashAlunosAutistasEl = document.getElementById('dashAlunosAutistas');
     const dashAlunosTdahEl = document.getElementById('dashAlunosTdah');
-    const dashNoiseLevelBarEl = document.getElementById('dashNoiseLevelBar');
     const dashNoiseValueEl = document.getElementById('dashNoiseValue');
+    const dashNoiseLevelBarEl = document.getElementById('dashNoiseLevelBar');
     const dashMaxNoiseEl = document.getElementById('dashMaxNoise');
     const dashIncidentesHojeEl = document.getElementById('dashIncidentesHoje');
     const dashIncidentesAutistasEl = document.getElementById('dashIncidentesAutistas');
@@ -128,13 +122,7 @@ let currentClientTheme = localStorage.getItem('appTheme') || 'light';
     let cachedSalas = [];
     let cachedAlunos = [];
     let cachedRelatorios = []; 
-    let cachedConfigs = { 
-        tema: currentClientTheme,
-        notificacoes: true, 
-        limiteBarulho: 70, 
-        simulacaoAtiva: false, 
-        salaPrincipalDashboardId: null 
-    };
+     let cachedConfigs = { simulacaoAtiva: true };
 
     let dashboardNoiseChartInstance, dashboardIncidentsChartInstance, profileAlunoIncidentsChartInstance;
 
@@ -496,8 +484,8 @@ async function loadCoreDataFromServer() {
     }
 
      // --- DASHBOARD (INÍCIO) ---
-    function updateDashboardUI() {
-        if (activeSectionId !== 'inicio' || !dashTotalAlunosEl) return;
+     function updateDashboardUI() {
+        if (activeSectionId !== 'inicio' || !dashNoiseValueEl) return;
         console.log("FN: updateDashboardUI. Usando Simulação:", cachedConfigs.simulacaoAtiva);
 
         // ===================================================================
@@ -519,75 +507,68 @@ async function loadCoreDataFromServer() {
                 // ===================================================================
         // PASSO 3: ATUALIZAR O RESTO DA DASHBOARD COM BASE NO MODO
         // ===================================================================
-        if (cachedConfigs.simulacaoAtiva) {
-            // --- MODO SIMULAÇÃO ATIVO ---
-            // Usa os dados reais de contagem de alunos que já calculamos,
-            // e simula o resto (ruído, incidentes).
-            
-            const currentNoise = Math.floor(Math.random() * 70) + 30;
-            if (dashNoiseLevelBarEl) dashNoiseLevelBarEl.style.width = `${Math.min(100, currentNoise)}%`;
-            if (dashNoiseValueEl) dashNoiseValueEl.textContent = `${currentNoise} dB`;
-            if (dashMaxNoiseEl && currentNoise > parseInt(dashMaxNoiseEl.textContent || "0")) dashMaxNoiseEl.textContent = currentNoise;
-            if (dashIncidentesHojeEl) dashIncidentesHojeEl.textContent = Math.floor(Math.random() * 3);
-            if (dashIncidentesAutistasEl) dashIncidentesAutistasEl.textContent = Math.floor(Math.random() * 2);
-            if (dashSalaStatusEl) dashSalaStatusEl.textContent = "Simulada";
-            if (dashToggleSalaBtn) {
-                dashToggleSalaBtn.disabled = false;
-                dashToggleSalaBtn.textContent = 'Ver Detalhes (Sim.)';
-                delete dashToggleSalaBtn.dataset.salaId;
-            }
-        } else {
-            // --- MODO NORMAL (REAL) ---
-            // Usa os dados reais do sensor que estão chegando via WebSocket.
+       if (cachedConfigs.simulacaoAtiva) {
+    const currentNoise = Math.floor(Math.random() * 70) + 30;
+    if (dashNoiseLevelBarEl) dashNoiseLevelBarEl.style.width = `${Math.min(100, currentNoise)}%`;
+    if (dashNoiseValueEl) dashNoiseValueEl.textContent = `${currentNoise} dB`;
+    if (dashMaxNoiseEl && currentNoise > parseInt(dashMaxNoiseEl.textContent || "0")) dashMaxNoiseEl.textContent = currentNoise;
+    if (dashIncidentesHojeEl) dashIncidentesHojeEl.textContent = Math.floor(Math.random() * 3);
+    if (dashIncidentesAutistasEl) dashIncidentesAutistasEl.textContent = Math.floor(Math.random() * 2);
+    if (dashSalaStatusEl) dashSalaStatusEl.textContent = "Simulada";
+    if (dashToggleSalaBtn) {
+        dashToggleSalaBtn.disabled = false;
+        dashToggleSalaBtn.textContent = 'Ver Detalhes (Sim.)';
+        delete dashToggleSalaBtn.dataset.salaId;
+    }
+} else {
+    let valorDoSensor = ultimoValorSensorReal;
+    let displayValor = "---";
+    let noiseNumber = 0;
 
-            let valorDoSensor = ultimoValorSensorReal; // Pega da variável global
-            let displayValor = "---";
-            let noiseNumber = 0;
+    if (typeof valorDoSensor === 'string' && valorDoSensor.includes(':')) {
+        const partes = valorDoSensor.split(':');
+        noiseNumber = parseInt(partes[1], 10) || 0;
+        displayValor = `${noiseNumber} dB`;
+    } else {
+        displayValor = valorDoSensor;
+    }
 
-            // Extrai o número da string "dB:75"
-            if (typeof valorDoSensor === 'string' && valorDoSensor.includes(':')) {
-                const partes = valorDoSensor.split(':');
-                noiseNumber = parseInt(partes[1], 10) || 0;
-                displayValor = `${noiseNumber} dB`;
-            } else {
-                // Se o valor não for no formato esperado, mostra o status (ex: "Conectando...")
-                displayValor = valorDoSensor;
-            }
-
-            // ATUALIZA A UI DO RUÍDO COM OS DADOS REAIS
-            if (dashNoiseLevelBarEl) dashNoiseLevelBarEl.style.width = `${Math.min(100, noiseNumber)}%`;
-            if (dashNoiseValueEl) dashNoiseValueEl.textContent = displayValor;
-            if (dashMaxNoiseEl) {
-                const maxAtual = parseInt(dashMaxNoiseEl.textContent || "0");
-                if (noiseNumber > maxAtual) {
-                    dashMaxNoiseEl.textContent = noiseNumber;
-                }
-            }
-            
-            // O resto da sua lógica para o modo real continua a mesma
-            const hojeStr = new Date().toISOString().split('T')[0];
-            const incidentesDeHoje = cachedRelatorios ? cachedRelatorios.filter(r => r.tipo === 'incidente' && r.data?.startsWith(hojeStr)) : [];
-            if (dashIncidentesHojeEl) dashIncidentesHojeEl.textContent = incidentesDeHoje.length;
-
-            const incidentesAutistasHojeCount = cachedAlunos ? incidentesDeHoje.filter(r => cachedAlunos.find(a => a.id === r.conteudo?.alunoId)?.autista).length : 0;
-            if (dashIncidentesAutistasEl) dashIncidentesAutistasEl.textContent = incidentesAutistasHojeCount;
-
-            const salaPrincipalId = cachedConfigs.salaPrincipalDashboardId || (cachedSalas && cachedSalas[0]?.id);
-            const salaPrincipal = cachedSalas ? cachedSalas.find(s => s.id === salaPrincipalId) : null;
-            if (dashSalaStatusEl && salaPrincipal) dashSalaStatusEl.textContent = salaPrincipal.adaptada ? "Adaptada" : "Padrão";
-            else if (dashSalaStatusEl) dashSalaStatusEl.textContent = "N/A";
-
-            if (dashToggleSalaBtn) {
-                dashToggleSalaBtn.disabled = !salaPrincipal;
-                if (salaPrincipal) {
-                    dashToggleSalaBtn.dataset.salaId = salaPrincipal.id;
-                    dashToggleSalaBtn.textContent = salaPrincipal.adaptada ? 'Desativar Adap.' : 'Ativar Adap.';
-                } else {
-                    dashToggleSalaBtn.textContent = 'Ver Detalhes';
-                    delete dashToggleSalaBtn.dataset.salaId;
-                }
-            }
+    if (dashNoiseLevelBarEl) dashNoiseLevelBarEl.style.width = `${Math.min(100, noiseNumber)}%`;
+    if (dashNoiseValueEl) dashNoiseValueEl.textContent = displayValor;
+    if (dashMaxNoiseEl) {
+        const maxAtual = parseInt(dashMaxNoiseEl.textContent || "0");
+        if (noiseNumber > maxAtual) {
+            dashMaxNoiseEl.textContent = noiseNumber;
         }
+    }
+
+    const hojeStr = new Date().toISOString().split('T')[0];
+    const relatoriosHoje = (cachedRelatorios || []).filter(r => r.tipo === 'incidente' && r.data?.startsWith(hojeStr));
+    if (dashIncidentesHojeEl) dashIncidentesHojeEl.textContent = relatoriosHoje.length;
+
+    const alunosComTEA_Ids = (cachedAlunos || []).filter(a => a.autista).map(a => a.id);
+    const incidentesAutistasHoje = relatoriosHoje.filter(r => r.conteudo?.alunoId && alunosComTEA_Ids.includes(r.conteudo.alunoId));
+    if (dashIncidentesAutistasEl) dashIncidentesAutistasEl.textContent = incidentesAutistasHoje.length;
+
+    const salas = cachedSalas || [];
+    const salaPrincipalId = cachedConfigs.salaPrincipalDashboardId || (salas.length > 0 ? salas[0].id : null);
+    const salaPrincipal = salaPrincipalId ? salas.find(s => s.id === salaPrincipalId) : null;
+    
+    if (dashSalaStatusEl) {
+        dashSalaStatusEl.textContent = salaPrincipal ? (salaPrincipal.adaptada ? "Adaptada" : "Padrão") : "N/A";
+    }
+
+    if (dashToggleSalaBtn) {
+        dashToggleSalaBtn.disabled = !salaPrincipal;
+        if (salaPrincipal) {
+            dashToggleSalaBtn.dataset.salaId = salaPrincipal.id;
+            dashToggleSalaBtn.textContent = salaPrincipal.adaptada ? 'Desativar Adap.' : 'Ativar Adap.';
+        } else {
+            dashToggleSalaBtn.textContent = 'Ver Detalhes';
+            delete dashToggleSalaBtn.dataset.salaId;
+        }
+    }
+}
         renderDashboardChartsUI();
     }
     function renderDashboardChartsUI() {
