@@ -1,21 +1,17 @@
-// server/server.js (VERSÃO FINAL COMPLETA - COM BLUETOOTH NA PORTA COM7)
+// server.js (ESTE VAI PARA O GITHUB E RENDER)
 
 const express = require('express');
+const http = require('http');
+const WebSocket = require('ws');
 const path = require('path');
 const cors = require('cors');
 const axios = require('axios');
 const fs = require('fs');
 
-// Bibliotecas para comunicação com a porta serial (Bluetooth)
-const { SerialPort } = require('serialport');
-const { ReadlineParser } = require('@serialport/parser-readline');
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ==========================================================
-// CONFIGURAÇÃO DO BANCO DE DADOS NA NUVEM (JSONBIN.IO)
-// ==========================================================
+// --- CONFIGURAÇÃO DO BANCO DE DADOS NA NUVEM (JSONBIN.IO) ---
 const JSONBIN_API_KEY = "$2a$10$Jay/xyfmuFUEsGq2MX6iquj7OkEpzQAAk4m3dod/J9C2X45IqAdeG";
 const ALUNOS_BIN_ID = "684852998960c979a5a79a0d";
 const JSONBIN_API_URL = `https://api.jsonbin.io/v3/b/${ALUNOS_BIN_ID}`;
@@ -24,126 +20,53 @@ const jsonBinHeaders = {
     'X-Master-Key': JSONBIN_API_KEY
 };
 
-
-// ==========================================================
-// LÓGICA DO SENSOR BLUETOOTH
-// ==========================================================
-let ultimoDadoDoSensor = "Aguardando conexão...";
-
-// --- AQUI ESTÁ A SUA PORTA CORRETA ---
-const PORTA_BLUETOOTH = 'COM7';
-
-try {
-    // Tenta se conectar à porta serial do Bluetooth
-    const portaSerial = new SerialPort({
-        path: PORTA_BLUETOOTH,
-        baudRate: 9600, // Garanta que seja a mesma do seu Arduino: bluetooth.begin(9600)
-    });
-
-    // Cria um "parser" que lê os dados linha por linha
-    const parser = portaSerial.pipe(new ReadlineParser({ delimiter: '\r\n' }));
-
-    portaSerial.on('open', () => {
-        console.log(`✅ Conexão Bluetooth estabelecida com sucesso na porta ${PORTA_BLUETOOTH}`);
-        ultimoDadoDoSensor = "Conectado. Aguardando dados...";
-    });
-
-    // Evento que é disparado toda vez que uma linha completa de dados chega do Arduino
-    parser.on('data', (dado) => {
-        console.log(`[Bluetooth] Dado recebido do Arduino: ${dado}`);
-        ultimoDadoDoSensor = dado.trim(); // Armazena o último dado recebido, sem espaços extras
-    });
-
-    portaSerial.on('error', (err) => {
-        console.error(`❌ Erro na porta serial Bluetooth: ${err.message}`);
-        ultimoDadoDoSensor = "Erro de conexão";
-    });
-
-} catch (error) {
-    console.warn(`[Bluetooth] AVISO: Não foi possível iniciar a conexão na porta ${PORTA_BLUETOOTH}. Verifique se o dispositivo está ligado e pareado.`);
-    ultimoDadoDoSensor = "Desconectado";
-}
-
-
-// ==========================================================
-// LÓGICA DO MODO DE SIMULAÇÃO
-// ==========================================================
+// --- ESTADO DO SERVIDOR ---
 let simuladorAtivo = true;
 const alunosPadraoPath = path.join(__dirname, 'data', 'alunosPadrao.json');
+let ultimoDadoDoSensor = "Gateway desconectado."; // Variável para guardar o dado do sensor
 
-
-// ==========================================================
-// MIDDLEWARES
-// ==========================================================
+// --- MIDDLEWARES ---
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// ==========================================================
+// CONFIGURAÇÃO DO SERVIDOR WEBSOCKET
+// ==========================================================
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+wss.on('connection', ws => {
+    console.log('[Render] Um cliente (Gateway ou App) se conectou via WebSocket.');
+    ws.send(JSON.stringify({ type: 'initial_sensor_value', value: ultimoDadoDoSensor }));
+
+    ws.on('message', message => {
+        try {
+            const data = JSON.parse(message);
+            if (data.type === 'sensor_update') {
+                console.log(`[Render] Recebido do Gateway(PC): ${data.value}`);
+                ultimoDadoDoSensor = data.value;
+                wss.clients.forEach(client => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'sensor_update', value: ultimoDadoDoSensor }));
+                    }
+                });
+            }
+        } catch (e) { console.error('Erro ao processar mensagem:', e); }
+    });
+    ws.on('close', () => { console.log('[Render] Cliente WebSocket desconectado.'); });
+});
 
 // ==========================================================
-// ROTAS DA API
+// ROTAS DA API (HTTP)
 // ==========================================================
+app.get('/api/sensor', (req, res) => res.json({ valor: ultimoDadoDoSensor }));
+app.get('/api/alunos', async (req, res) => { /* ... sua lógica de alunos ... */ });
+app.put('/api/configuracoes', (req, res) => { /* ... sua lógica de config ... */ });
+app.post('/api/alunos', async (req, res) => { /* ... sua lógica de cadastro ... */ });
 
-// --- ROTA NOVA PARA PEGAR O DADO DO SENSOR ---
-app.get('/api/sensor', (req, res) => {
-    res.json({ valor: ultimoDadoDoSensor });
-});
-
-
-// --- ROTA PARA LER OS ALUNOS ---
-app.get('/api/alunos', async (req, res) => {
-    if (simuladorAtivo) {
-        try {
-            res.json(JSON.parse(fs.readFileSync(alunosPadraoPath, 'utf8')));
-        } catch (error) { res.json([]); }
-    } else {
-        try {
-            const response = await axios.get(`${JSONBIN_API_URL}/latest`, { headers: jsonBinHeaders });
-            res.json(response.data.record || []);
-        } catch (error) { res.status(500).json({ message: 'Erro ao buscar dados.' }); }
-    }
-});
-
-
-// --- ROTA PARA ALTERNAR O MODO DE SIMULAÇÃO ---
-app.put('/api/configuracoes', (req, res) => {
-    const novoEstado = req.body.simulacaoAtiva;
-    if (typeof novoEstado === 'boolean') {
-        simuladorAtivo = novoEstado;
-        res.json({ success: true, simulacaoAtiva: simuladorAtivo });
-    } else { res.status(400).json({ success: false, message: 'Valor inválido.' }); }
-});
-
-
-// --- ROTA PARA CADASTRAR NOVOS ALUNOS ---
-app.post('/api/alunos', async (req, res) => {
-    try {
-        const getResponse = await axios.get(`${JSONBIN_API_URL}/latest`, { headers: jsonBinHeaders });
-        const alunosCadastrados = getResponse.data.record || [];
-
-        const ultimoId = alunosCadastrados.length > 0 ? Math.max(...alunosCadastrados.map(a => a.id || 0)) : 0;
-        
-        const novoAluno = {
-            id: ultimoId + 1,
-            nome: req.body.name,
-            autista: req.body.diagnosis === 'autista',
-            // ... (outros campos que seu formulário envia)
-        };
-
-        alunosCadastrados.push(novoAluno);
-        await axios.put(JSONBIN_API_URL, alunosCadastrados, { headers: jsonBinHeaders });
-        
-        res.status(201).json(novoAluno);
-    } catch (error) {
-        res.status(500).json({ message: 'Erro ao cadastrar aluno na nuvem.' });
-    }
-});
-
-
-// --- ROTA DE FALLBACK E INICIALIZAÇÃO ---
+// --- INICIALIZAÇÃO ---
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
-
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor Gateway rodando na porta ${PORT}`);
-    console.log(`🎧 Escutando por dados Bluetooth na porta ${PORTA_BLUETOOTH}...`);
+server.listen(PORT, () => {
+    console.log(`🚀 Servidor Principal (Render) e WebSocket rodando na porta ${PORT}`);
 });
